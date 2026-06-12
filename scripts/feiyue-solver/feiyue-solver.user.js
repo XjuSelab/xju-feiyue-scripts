@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.2.2
+// @version      2.2.3
 // @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、失败读样例多版本重试、自动跳题。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
@@ -804,7 +804,7 @@
         panel.innerHTML = `
             <div id="cgai-head">
                 <div class="cgai-brand"><span class="cgai-badge">${ICON.brand}</span>
-                    <span class="cgai-titles"><b>CG AI 解题</b><i>DeepSeek 自动解题 · 开刷</i></span></div>
+                    <span class="cgai-titles"><b>飞跃·解题 Solver</b><i>DeepSeek 自动解题 · 开刷</i></span></div>
                 <span class="cgai-tools"><span class="cgai-ic" id="cgai-cfg" title="配置">${ICON.settings}</span>
                     <span class="cgai-ic" id="cgai-min" title="收起">${ICON.minus}</span></span>
             </div>
@@ -845,7 +845,7 @@
         panel.appendChild(arrow); // 作为 #cgai-panel 的子节点，绝对定位指向右上角齿轮
         document.body.appendChild(panel);
         arrow.onclick = openConfig;
-        fab = document.createElement('div'); fab.id = 'cgai-fab'; fab.innerHTML = ICON.brand + '<span>AI 解题</span>'; document.body.appendChild(fab);
+        fab = document.createElement('div'); fab.id = 'cgai-fab'; fab.innerHTML = ICON.brand + '<span>飞跃·解题</span>'; document.body.appendChild(fab);
 
         statusEl = panel.querySelector('#cgai-status'); titleEl = panel.querySelector('#cgai-title');
         codeWrap = panel.querySelector('#cgai-codewrap'); verdictEl = panel.querySelector('#cgai-verdict');

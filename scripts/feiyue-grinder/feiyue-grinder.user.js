@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         飞跃·刷课 Grinder
 // @namespace    https://feiyue.selab.top/feiyue-grinder
-// @version      2.9.12
+// @version      2.9.13
 // @updateURL    https://feiyue.selab.top/feiyue-grinder.user.js
 // @downloadURL  https://feiyue.selab.top/feiyue-grinder.user.js
 // @description  三合一全自动:视频(自动播,倍速/静音可调)+课件(滚动翻完每一页)+随堂测验(AI答题 GPT5.5/DeepSeek 可切,AI优先+题库兜底)。面板置于顶层窗口可任意拖动,引擎跑在课程 iframe 内,经 postMessage 通信。UI 全 SVG(无 emoji)。登录(短信验证码)用华为原生界面手动完成。API Key 仅存本地(GM)。
@@ -1125,7 +1125,7 @@
     if (panel) return; injectCSS();
     panel = document.createElement('div'); panel.id = 'sxz-panel';
     panel.innerHTML = `
-      <div id="sxz-head"><div class="brand"><div class="badge">${ic('cap', 19)}</div><div class="titles"><b>刷课助手</b><i>shixizhi · v${(typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '?'}</i></div></div>
+      <div id="sxz-head"><div class="brand"><div class="badge">${ic('cap', 19)}</div><div class="titles"><b>飞跃·刷课 Grinder</b><i>shixizhi · v${(typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '?'}</i></div></div>
         <div class="tools"><div class="ic" id="sxz-gear" title="设置 / 配置 API Key">${ic('gear', 18)}</div><div class="ic" id="sxz-minz" title="收起">${ic('min', 18)}</div></div></div>
       <div id="sxz-arrow">${ic('key', 13)}先配置 API Key</div>
       <div id="sxz-body">
@@ -1143,7 +1143,7 @@
       <div id="sxz-foot">登录用华为原生界面手动(短信验证码自己手打) · Key 仅存本地</div>`;
     const mount = () => document.body && document.body.appendChild(panel);
     (document.body ? Promise.resolve() : new Promise((r) => document.addEventListener('DOMContentLoaded', r))).then(mount);
-    fab = document.createElement('div'); fab.id = 'sxz-fab'; fab.innerHTML = ic('cap', 16) + '<span>刷课助手</span>';
+    fab = document.createElement('div'); fab.id = 'sxz-fab'; fab.innerHTML = ic('cap', 16) + '<span>飞跃·刷课</span>';
     (document.body ? Promise.resolve() : new Promise((r) => document.addEventListener('DOMContentLoaded', r))).then(() => document.body.appendChild(fab));
     fab.onclick = () => { fab.style.display = 'none'; panel.style.display = 'flex'; };
     bindPanel(); makeDraggable(panel, panel.querySelector('#sxz-head'));

@@ -1,4 +1,4 @@
-# CourseGrading AI 自动解题助手（脚本猫 / 油猴脚本）
+# 飞跃·解题 Solver（`feiyue-solver`）
 
 希冀（CourseGrading / educg）编程题平台的 AI 解题脚本：
 **提取完整题目 → DeepSeek 生成 → 自动提交 → 轮询并显示判题结果**，支持**一键串行开刷所有作业 / 所有题目、失败读样例多版本重试、自动跳题**。
