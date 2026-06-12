@@ -6,7 +6,7 @@ cat <<'EOF'
 == sxz-bank 重建步骤(huawei2 上,谨慎执行)==
 
 0) 先把最新源码同步到 huawei2(本机经二跳):
-   scp -P 2222 scripts/huawei-sxz-shuake/sxz-bank/* winbeau@win-wsl2:/tmp/
+   scp -P 2222 scripts/feiyue-grinder/sxz-bank/* winbeau@win-wsl2:/tmp/
    ssh -p 2222 winbeau@win-wsl2 'scp /tmp/bank_server.py /tmp/Dockerfile huawei2:~/sxz-bank/'
 
 1) 确认当前容器的数据卷挂载(照抄到下面的 -v):

@@ -1,13 +1,13 @@
 // ==UserScript==
-// @name         CourseGrading AI 自动解题助手 (DeepSeek)
-// @namespace    https://github.com/winbeau/xiji
+// @name         飞跃·解题 Solver
+// @namespace    https://feiyue.selab.top/feiyue-solver
 // @version      2.2.2
 // @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、失败读样例多版本重试、自动跳题。
 // @author       winbeau
-// @homepageURL  https://github.com/winbeau/xiji
-// @supportURL   https://github.com/winbeau/xiji/issues
-// @downloadURL  https://feiyue.selab.top/cg-ai-solver.user.js
-// @updateURL    https://feiyue.selab.top/cg-ai-solver.user.js
+// @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
+// @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
+// @downloadURL  https://feiyue.selab.top/feiyue-solver.user.js
+// @updateURL    https://feiyue.selab.top/feiyue-solver.user.js
 // @match        http://10.109.120.139/*
 // @icon         http://10.109.120.139/images/cgicon.png
 // @grant        GM_xmlhttpRequest

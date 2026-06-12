@@ -1,6 +1,6 @@
 // 从真实脚本抽 CSS + 同套图标，生成 v2 预览：①开刷进行中主面板 ②配置浮层。
 import fs from 'fs';
-const src = fs.readFileSync(new URL('./cg-ai-solver.user.js', import.meta.url), 'utf8');
+const src = fs.readFileSync(new URL('./feiyue-solver.user.js', import.meta.url), 'utf8');
 let css = src.match(/GM_addStyle\(`([\s\S]*?)`\);/)[1].replace(/\\\\/g, '\\');
 
 const svg = (p, s) => `<svg class="cgai-svg" width="${s || 16}" height="${s || 16}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;

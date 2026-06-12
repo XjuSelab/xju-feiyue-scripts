@@ -1,8 +1,8 @@
-# 飞跃·刷课 Grinder（`huawei-sxz-shuake`）
+# 飞跃·刷课 Grinder（`feiyue-grinder`）
 
 华为实习汁（shixizhi）课程全自动刷课。Tampermonkey 脚本。
 
-**安装 / 更新**：<https://feiyue.selab.top/huawei-sxz-shuake.user.js>
+**安装 / 更新**：<https://feiyue.selab.top/feiyue-grinder.user.js>
 
 ## 功能
 

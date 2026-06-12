@@ -1,6 +1,6 @@
 // test-exam.mjs — 结课考试(examContent)新逻辑离线验证
 //
-// 这些断言对应 huawei-sxz-shuake.user.js 里新增的 solveExam 配套函数:
+// 这些断言对应 feiyue-grinder.user.js 里新增的 solveExam 配套函数:
 //   examRemainSec / examAnswered / examNextBtn / examCards / examSubmitBtn
 // 用户脚本里这些函数在 IIFE 内未导出,这里【忠实重写同款逻辑】(改全局 document→显式 root)
 // 在 jsdom 还原的 examContent DOM 上跑,验证正则/选择器与真实页面一致。

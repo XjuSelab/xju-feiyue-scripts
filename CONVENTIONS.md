@@ -8,11 +8,10 @@
 
 ### 技术 ID（文件名 / 目录 / URL）
 
-- 文件名：`<scope>-<feature>.user.js`，全小写、连字符分隔、无空格无中文。
-  - `scope` = 平台/项目短名（`huawei`、`cg` …），`feature` = 功能简称（`sxz-shuake`、`ai-solver`）。
-  - 例：`huawei-sxz-shuake.user.js`、`cg-ai-solver.user.js`。
-- 每个脚本一个目录：`scripts/<scope>-<feature>/`，内含脚本本体、可选后端、`tests/`、`README.md`。
-- **技术 ID 一旦发布即冻结**（它就是 feiyue 发布 URL，改名=断掉老用户自动更新）。
+- 文件名：`feiyue-<工具名>.user.js`，全小写、连字符分隔、无空格无中文。`<工具名>` = 显示名里的英文 `-er` 词小写（`solver`、`grinder`、`downloader` …）。
+  - 例：`feiyue-solver.user.js`、`feiyue-grinder.user.js`。
+- 每个脚本一个目录：`scripts/feiyue-<工具名>/`，内含脚本本体、可选后端、`tests/`、`README.md`。
+- **技术 ID 一旦有安装用户即冻结**（它就是 feiyue 发布 URL，改名=断掉老用户自动更新）；内测期（无用户）可放开改。
 
 ### 显示名：工具系 `-er`
 
@@ -25,12 +24,12 @@
 
 | 技术 ID | 中文 | English | 动作取意 |
 |---|---|---|---|
-| `cg-ai-solver` | 飞跃·解题 | **Solver** | solve 解题 |
-| `huawei-sxz-shuake` | 飞跃·刷课 | **Grinder** | grind 正是游戏「刷」的本义 |
+| `feiyue-solver` | 飞跃·解题 | **Solver** | solve 解题 |
+| `feiyue-grinder` | 飞跃·刷课 | **Grinder** | grind 正是游戏「刷」的本义 |
 
 新脚本沿用此式（下载→`Downloader`、翻译→`Translator`、导出→`Exporter` …），保证一眼归类、可无限扩展。
 
-> ⚠️ **存量脚本的 `@name` / `@namespace` 保持原值不动**——改了 Tampermonkey 会当成新脚本、老用户丢配置；新显示名只用于 README / 仓库品牌。**新脚本**的 `@name` 直接写成 `飞跃·<动作> <动作>er — <一句话用途>`。
+> `@name` 直接写成 `飞跃·<动作> <动作>er`（用途放 `@description`）。改 `@name`/`@namespace` 会让 Tampermonkey 当成新脚本、老用户丢配置——所以**只在无安装用户时改**（见下「脚本身份」）。
 
 ## 元数据（UserScript header）
 
@@ -45,16 +44,19 @@
 - 发布 URL：一脚本一 URL，**不在路径里嵌版本号**；历史版本靠 git 提交追溯。
 - 验证回源：链接后加 `?v=<版本>` 绕 Cloudflare 缓存（缓存 4h），`cf-cache-status: MISS` 即最新。
 
-### ⚠️ 存量脚本不要改 `@name` / `@namespace`
+### ⚠️ 脚本身份（`@name` + `@namespace`）
 
-Tampermonkey 用 `@name`+`@namespace` 作为脚本身份。**改了会被当成新脚本，老用户丢掉本地配置**（API Key、各种 GM 标记）。所以：
+Tampermonkey 用 `@name`+`@namespace` 作脚本身份。**改了会被当成新脚本，老用户丢本地配置**（API Key、GM 标记）。规则：
 
-- 已发布的脚本：保持原有 `@name`/`@namespace` 不动（即使不符合本规范）。
-- 仅**新脚本**按本规范取名。
+- **有安装用户后**，`@name` / `@namespace` / 技术 ID 一律冻结，不再改名。
+- **内测期（无用户）可放开对齐**——本仓两脚本已在内测期统一为：
 
-当前存量（保持原样）：
-- huawei-sxz-shuake：`@namespace https://e.huawei.com/talent/sxz-shuake`
-- cg-ai-solver：`@namespace https://github.com/winbeau/xiji`
+  | 脚本 | `@name` | `@namespace` |
+  |---|---|---|
+  | feiyue-solver | `飞跃·解题 Solver` | `https://feiyue.selab.top/feiyue-solver` |
+  | feiyue-grinder | `飞跃·刷课 Grinder` | `https://feiyue.selab.top/feiyue-grinder` |
+
+- 新脚本一律按工具系 `-er` 取名，`@namespace` 用 `https://feiyue.selab.top/feiyue-<工具名>`。
 
 ## 版本与 git
 

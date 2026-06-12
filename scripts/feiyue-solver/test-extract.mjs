@@ -13,7 +13,7 @@ function load(file, url) {
     w.GM_addStyle = () => {}; w.GM_getValue = (k, d) => (k in store ? store[k] : d); w.GM_setValue = (k, v) => { store[k] = v; };
     w.GM_deleteValue = k => { delete store[k]; }; w.GM_registerMenuCommand = () => {}; w.GM_xmlhttpRequest = () => {};
     w.TextDecoder = TextDecoder; w.DataTransfer = function () { this.items = { add() {} }; this.files = []; };
-    w.eval(fs.readFileSync(`${DIR}/cg-ai-solver.user.js`, 'utf8'));
+    w.eval(fs.readFileSync(`${DIR}/feiyue-solver.user.js`, 'utf8'));
     if (!w.document.getElementById('cgai-panel')) w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
     return { w, api: w.__CGAI_API__ };
 }

@@ -1,6 +1,6 @@
 # 华为「实习汁」刷课脚本 — jsdom 离线单测
 
-对 `../huawei-sxz-shuake.user.js` 里的**纯逻辑函数**做离线单元测试：用 jsdom 还原真实官方页面 DOM，断言提取 / 解析 / 判定逻辑正确。
+对 `../feiyue-grinder.user.js` 里的**纯逻辑函数**做离线单元测试：用 jsdom 还原真实官方页面 DOM，断言提取 / 解析 / 判定逻辑正确。
 
 ## 如何运行
 
@@ -27,7 +27,7 @@ npm test      # = node --test
 ## ⚠️ 需与用户脚本同步
 
 `sxz-core.mjs` 是用户脚本（脚本猫 IIFE，函数未导出）里纯函数的**人工拷贝**。
-**改动 `../huawei-sxz-shuake.user.js` 中这些函数的逻辑时，必须同步修改 `sxz-core.mjs`**，否则测试会与线上脚本脱节。文件头部已有同步提醒注释。
+**改动 `../feiyue-grinder.user.js` 中这些函数的逻辑时，必须同步修改 `sxz-core.mjs`**，否则测试会与线上脚本脱节。文件头部已有同步提醒注释。
 
 ## 关于 jsdom 的 `innerText`
 
