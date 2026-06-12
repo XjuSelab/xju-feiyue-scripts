@@ -1,0 +1,15 @@
+# deps
+node_modules/
+# secrets / keys
+.env
+*.key
+ds_key
+# data / build
+*.db
+*.sqlite
+dist/
+# tmp / editor
+/tmp/
+.DS_Store
+*.log
+.claude/

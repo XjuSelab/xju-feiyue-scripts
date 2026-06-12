@@ -1,0 +1,13 @@
+{
+  "name": "sxz-shuake-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "jsdom 离线单测：华为实习汁刷课脚本纯逻辑函数",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}
