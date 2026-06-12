@@ -4,11 +4,13 @@
 
 ## 脚本列表
 
-| 脚本 | 用途 | 安装 / 更新 | 版本 |
-|---|---|---|---|
-| **huawei-sxz-shuake** | 华为实习汁（shixizhi）课程全自动刷课：视频 + 课件 + 随堂测验 + 结课考试（题库优先 + AI 兜底，自带共享云题库 `sxz-bank`） | [安装](https://feiyue.selab.top/huawei-sxz-shuake.user.js) | 2.9.12 |
-| **cg-ai-solver** | CourseGrading OJ 的 AI 自动解题助手（DeepSeek） | [安装](https://feiyue.selab.top/cg-ai-solver.user.js) | 2.2.2 |
-| _import_（不在本仓） | 飞跃成绩单一键导入 | 由 [Aurash](https://github.com/winbeau/Aurash) 项目统一维护与部署 | — |
+命名采用「工具系 -er」：中文 `飞跃·<动作>` + 英文 `<动作>er`（见 [CONVENTIONS](./CONVENTIONS.md#命名)）。
+
+| 名称 | 目录（技术 ID） | 用途 | 安装 / 更新 | 版本 |
+|---|---|---|---|---|
+| **飞跃·解题 Solver** | `cg-ai-solver` | CourseGrading（Java/OJ）AI 自动解题（DeepSeek） | [安装](https://feiyue.selab.top/cg-ai-solver.user.js) | 2.2.2 |
+| **飞跃·刷课 Grinder** | `huawei-sxz-shuake` | 华为实习汁（小学期）课程全自动刷课：视频 + 课件 + 随堂测验 + 结课考试（题库优先 + AI 兜底，自带共享云题库 `sxz-bank`） | [安装](https://feiyue.selab.top/huawei-sxz-shuake.user.js) | 2.9.12 |
+| _飞跃·导入 import_（不在本仓） | — | 飞跃成绩单一键导入 | 由 [Aurash](https://github.com/winbeau/Aurash) 项目统一维护与部署 | — |
 
 > 安装：点「安装」链接，Tampermonkey 会弹出安装/更新页。装过的会自动检查更新（CF 边缘缓存 4h，手动强制可在链接后加 `?v=<版本>` 回源验证）。
 

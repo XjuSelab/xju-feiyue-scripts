@@ -1,6 +1,6 @@
-# huawei-sxz-shuake
+# 飞跃·刷课 Grinder（`huawei-sxz-shuake`）
 
-华为实习汁（shixizhi）课程全自动刷课助手。Tampermonkey 脚本。
+华为实习汁（shixizhi）课程全自动刷课。Tampermonkey 脚本。
 
 **安装 / 更新**：<https://feiyue.selab.top/huawei-sxz-shuake.user.js>
 

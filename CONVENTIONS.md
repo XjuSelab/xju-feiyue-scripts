@@ -4,10 +4,33 @@
 
 ## 命名
 
+每个脚本有两层名字：**技术 ID**（目录 / 文件 / URL，机器用）和**显示名**（README / `@name`，人看）。
+
+### 技术 ID（文件名 / 目录 / URL）
+
 - 文件名：`<scope>-<feature>.user.js`，全小写、连字符分隔、无空格无中文。
   - `scope` = 平台/项目短名（`huawei`、`cg` …），`feature` = 功能简称（`sxz-shuake`、`ai-solver`）。
   - 例：`huawei-sxz-shuake.user.js`、`cg-ai-solver.user.js`。
 - 每个脚本一个目录：`scripts/<scope>-<feature>/`，内含脚本本体、可选后端、`tests/`、`README.md`。
+- **技术 ID 一旦发布即冻结**（它就是 feiyue 发布 URL，改名=断掉老用户自动更新）。
+
+### 显示名：工具系 `-er`
+
+品牌显示名统一格式：`飞跃·<动作> <动作>er`。
+
+- **中文**：`飞跃·<二字动作>`——取功能的核心动词、二字对仗。
+- **英文**：核心动作 + `-er`（施动者 / 工具名），单词、首字母大写。
+
+现行：
+
+| 技术 ID | 中文 | English | 动作取意 |
+|---|---|---|---|
+| `cg-ai-solver` | 飞跃·解题 | **Solver** | solve 解题 |
+| `huawei-sxz-shuake` | 飞跃·刷课 | **Grinder** | grind 正是游戏「刷」的本义 |
+
+新脚本沿用此式（下载→`Downloader`、翻译→`Translator`、导出→`Exporter` …），保证一眼归类、可无限扩展。
+
+> ⚠️ **存量脚本的 `@name` / `@namespace` 保持原值不动**——改了 Tampermonkey 会当成新脚本、老用户丢配置；新显示名只用于 README / 仓库品牌。**新脚本**的 `@name` 直接写成 `飞跃·<动作> <动作>er — <一句话用途>`。
 
 ## 元数据（UserScript header）
 
