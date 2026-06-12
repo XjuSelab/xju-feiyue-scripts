@@ -29,4 +29,4 @@ stdlib `http.server` + SQLite 的极简共享题库服务，Docker 部署在 hua
 
 ## API Key
 
-OpenAI 兼容（GPT-5.5 / DeepSeek 可切），**仅存本地 GM，绝不进仓库**。
+OpenAI 兼容，**默认 DeepSeek 官方**（`api.deepseek.com`；GPT-5.5 等可在设置切换），**Key 仅存本地 GM，绝不进仓库**。

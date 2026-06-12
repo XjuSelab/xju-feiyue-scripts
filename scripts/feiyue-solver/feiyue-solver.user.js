@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.2.3
+// @version      2.2.4
 // @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、失败读样例多版本重试、自动跳题。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
@@ -35,8 +35,8 @@
         THINKING: 'ds_thinking', AUTO_SUBMIT: 'cg_auto_submit', MAX_ATTEMPTS: 'cg_max_attempts',
         SKIP_PASSED: 'cg_skip_passed', GRIND: 'cg_grind_state', MODELS_CACHE: 'ds_models_cache',
     };
-    const DEFAULTS = { baseURL: 'https://aiapis.help/v1', model: 'gpt-5.5', strongModel: 'gpt-5.4-pro' };
-    const MODEL_SUGGEST = ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-pro', 'gpt-5.4-mini'];
+    const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
+    const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
     const OJ = location.origin;
     const PAGE_OF = { file: 'programList.jsp', iface: 'programWithInterfaceList.jsp', gap: 'programFillGapList.jsp' };
 
@@ -46,7 +46,7 @@
         baseURL: getBaseURL(),
         model: (GM_getValue(STORE.MODEL, DEFAULTS.model) || DEFAULTS.model).trim(),
         strongModel: (GM_getValue(STORE.STRONG_MODEL, DEFAULTS.strongModel) || '').trim(),
-        thinking: GM_getValue(STORE.THINKING, true),
+        thinking: GM_getValue(STORE.THINKING, false),
         autoSubmit: GM_getValue(STORE.AUTO_SUBMIT, true),
         maxAttempts: +GM_getValue(STORE.MAX_ATTEMPTS, 3),
         skipPassed: GM_getValue(STORE.SKIP_PASSED, true),

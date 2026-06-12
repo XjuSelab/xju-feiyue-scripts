@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         飞跃·刷课 Grinder
 // @namespace    https://feiyue.selab.top/feiyue-grinder
-// @version      2.9.14
+// @version      2.9.15
 // @updateURL    https://feiyue.selab.top/feiyue-grinder.user.js
 // @downloadURL  https://feiyue.selab.top/feiyue-grinder.user.js
 // @description  三合一全自动:视频(自动播,倍速/静音可调)+课件(滚动翻完每一页)+随堂测验(AI答题 GPT5.5/DeepSeek 可切,AI优先+题库兜底)。面板置于顶层窗口可任意拖动,引擎跑在课程 iframe 内,经 postMessage 通信。UI 全 SVG(无 emoji)。登录(短信验证码)用华为原生界面手动完成。API Key 仅存本地(GM)。
@@ -38,14 +38,14 @@
     deepseek: { label: 'DeepSeek-V4 (官方)',    baseURL: 'https://api.deepseek.com', model: 'deepseek-v4-flash' },
     custom:   { label: '自定义 OpenAI 兼容',     baseURL: '', model: '' },
   };
-  const DEF = { provider: 'gpt', keys: {}, baseURL: '', model: '', thinking: false,
+  const DEF = { provider: 'deepseek', keys: {}, baseURL: '', model: '', thinking: false,
     rate: 1, mute: true, autoNext: true, cwDwellSec: 8, quizAuto: true, answerSource: 'ai_bank', quizRetryMax: 2, autoFinalTest: false, antiIdle: true, force: false };
   const K = 'sxz_cfg_v2';
   function loadCfg() { try { return Object.assign({}, DEF, JSON.parse(GM_getValue(K, '{}'))); } catch (e) { return Object.assign({}, DEF); } }
   function saveCfg() { GM_setValue(K, JSON.stringify(CFG)); }
   let CFG = loadCfg();
   let BANK = {}; try { BANK = JSON.parse(GM_getValue('sxz_bank', '{}')); } catch (e) { BANK = {}; }
-  function activeProvider() { return PROVIDERS[CFG.provider] || PROVIDERS.gpt; }
+  function activeProvider() { return PROVIDERS[CFG.provider] || PROVIDERS.deepseek; }
   function apiBase() { return (CFG.baseURL || activeProvider().baseURL || '').replace(/\/+$/, ''); }
   function apiModel() { return CFG.model || activeProvider().model; }
   function apiKey() { return (CFG.keys && CFG.keys[CFG.provider]) || ''; }
