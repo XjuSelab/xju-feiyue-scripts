@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.2.4
+// @version      2.2.5
 // @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、失败读样例多版本重试、自动跳题。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
@@ -473,8 +473,21 @@
         const score = (txt.match(/得分\s*([\d.]+)/) || [])[1] || null;
         return { passed, total, score };
     }
-    // 失败时读「动态测试」详情：期望输出 vs 你的输出，反馈给模型
-    function fetchFailDetail(assignID, problemID) {
+    // dynamictest 的「期望vs实际」需先经 judgeDetailsCheck 触发服务端按需生成，否则直接 POST 返回空
+    // ——本仓血泪坑：不触发→拿不到差异→ feedbackFromHtml 只能回"未取到具体差异"→纠错退化成盲目重试，模型永远修不对
+    async function ensureDetailReady(assignID, problemID) {
+        const restOf = t => { const m = (t || '').match(/<rest>\s*(-?\d+)\s*<\/rest>/i); return m ? +m[1] : NaN; };
+        // rest = 剩余百分比：>0 仍在生成（轮询），0 完成，<0(-1/-2) 无详情/未提交
+        let rest = restOf(await gmGetText(`${OJ}/assignment/judgeDetailsCheck.jsp?checkFirst=true&assignID=${assignID}&problemID=${problemID}`));
+        for (let i = 0; i < 15 && rest > 0; i++) {
+            await sleep(1000);
+            rest = restOf(await gmGetText(`${OJ}/assignment/judgeDetailsCheck.jsp?assignID=${assignID}&problemID=${problemID}`));
+        }
+        await sleep(300); // 完成后稍等，确保 dynamictest 数据落地
+    }
+    // 失败时读「动态测试」详情：期望输出 vs 你的输出，反馈给模型（先触发生成再取）
+    async function fetchFailDetail(assignID, problemID) {
+        try { await ensureDetailReady(assignID, problemID); } catch (_) {}
         return new Promise(resolve => {
             GM_xmlhttpRequest({
                 method: 'POST', url: `${OJ}/assignment/moretest/dynamictest.jsp`, data: `assignID=${assignID}&problemID=${problemID}&userID=`,

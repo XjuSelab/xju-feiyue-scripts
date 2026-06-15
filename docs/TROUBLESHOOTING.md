@@ -85,6 +85,11 @@
 ### 接口题 duplicate class / 跨域请求挂起
 - **解法**：接口题**不重定义评测已提供的接口**；脚本猫首次会提示「允许跨域连接」到 API 域名，**必须点允许**否则请求一直挂起。
 
+### ★ 失败反馈为空 → 纠错变盲目重试（隐藏测试数据的题永远修不对）
+- **现象**：某些题（如「换码序列的拷贝」）连续多版全 `输出错误`，连 reasoner 也救不回；状态里看不到「期望 vs 实际」差异。
+- **根因（实测）**：`fetchFailDetail` 直接 POST `moretest/dynamictest.jsp` 取差异，但该详情是**按需生成**的——必须先经页面「详细评判结果 »」背后的流程触发：GET `judgeDetailsCheck.jsp?checkFirst=true` → 轮询 `judgeDetailsCheck.jsp` 直到 `<rest>0</rest>`（rest=剩余%，**0=完成**），`dynamictest.jsp` 才会带 `wrongContent/rightContent`。不触发 → 返回空 → `feedbackFromHtml` 只能回「未取到具体差异」→ 模型每版都不知错在哪 → 盲目重试，纠错环形同虚设。
+- **解法（v2.2.5）**：`fetchFailDetail` 先 `ensureDetailReady`（`checkFirst=true` + 轮询 rest 到 0）再 POST `dynamictest.jsp`。实测（注入故意错答案）：修复前 5/5 全错且全程「未取到具体差异」；修复后 **第 2 版即满分**（拿到「你的输出结尾多了 \n」差异后自纠）。
+
 > 更多见 [scripts/feiyue-solver/README.md](../scripts/feiyue-solver/README.md) 的「工作原理」。
 
 ---
