@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.2.5
-// @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、失败读样例多版本重试、自动跳题。
+// @version      2.2.6
+// @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -318,9 +318,32 @@
         items.sort((a, b) => a.page.localeCompare(b.page) || a.proNum - b.proNum);
         return items;
     }
+    // 未抽题的作业（有"抽取题目"按钮、还没抽过）开刷前自动抽一次；已抽过的（显示"重新抽取题目"）绝不重抽——重抽会换题、清掉已有进度
+    function needsDraw(html) {
+        return /name=["']?randomAssignFORM/i.test(html) && /value=["']抽取题目["']/.test(html) && !/重新抽取题目/.test(html);
+    }
+    function gmPostForm(url, data) {
+        return new Promise(resolve => {
+            GM_xmlhttpRequest({
+                method: 'POST', url, data, headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                responseType: 'arraybuffer', timeout: 25000,
+                onload: r => { try { resolve(new TextDecoder('gbk').decode(new Uint8Array(r.response))); } catch (_) { resolve(''); } },
+                onerror: () => resolve(''), ontimeout: () => resolve(''),
+            });
+        });
+    }
     async function fetchAssignProblems(assignID, courseID) {
         const url = `${OJ}/assignment/index.jsp?${courseID ? 'courseID=' + courseID + '&' : ''}assignID=${assignID}`;
-        return parseAssignProblems(await gmGetText(url), assignID);
+        let html = await gmGetText(url);
+        let items = parseAssignProblems(html, assignID);
+        if (!items.length && needsDraw(html)) { // 开刷前自动抽题（仅对"未抽过"的作业）：POST randomAssign.jsp + doChoose=true，再重读题目链接
+            tickStatus(`作业 ${assignID} 未抽题，正在自动抽取…`);
+            await gmPostForm(`${OJ}/assignment/randomAssign.jsp`, `assignID=${assignID}&doChoose=true`);
+            await sleep(800);
+            html = await gmGetText(url);
+            items = parseAssignProblems(html, assignID);
+        }
+        return items;
     }
     async function buildQueue() {
         let assignList = isProblemPage() ? discoverAssignList() : [];
