@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.4.0
+// @version      2.4.1
 // @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志去提 issue)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。
 // @author       winbeau
 // @homepageURL  https://github.com/Jackrainman/xju-feiyue-scripts
@@ -39,7 +39,7 @@
         THINKING: 'ds_thinking', AUTO_SUBMIT: 'cg_auto_submit', MAX_ATTEMPTS: 'cg_max_attempts',
         SKIP_PASSED: 'cg_skip_passed', GRIND: 'cg_grind_state', MODELS_CACHE: 'ds_models_cache', LOG: 'cgai_log',
     };
-    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.0';
+    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.1';
     const SUPPORT_URL = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.supportURL) || 'https://github.com/Jackrainman/xju-feiyue-scripts/issues';
     const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
     const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
@@ -1035,7 +1035,7 @@
             `页面: ${location.pathname}${location.search}`,
             `服务商(host): ${host}    （API Key 已隐藏，不会被复制）`,
             `主模型: ${s.model}  强模型: ${s.strongModel || '-'}  思考: ${s.thinking ? '开' : '关'}`,
-            `重试版本: ${s.maxAttempts}  自动提交: ${s.autoSubmit ? '开' : '关'}  跳过已满分: ${s.skipPassed ? '开' : '关'}`,
+            `重试次数: ${s.maxAttempts}  自动提交: ${s.autoSubmit ? '开' : '关'}  跳过已满分: ${s.skipPassed ? '开' : '关'}`,
             `UA: ${navigator.userAgent}`,
             '--- 最近事件（旧 → 新）---',
         ];
@@ -1082,7 +1082,7 @@
                     <label class="cgai-chk"><input type="checkbox" id="cgai-think"> 思考模式</label>
                     <label class="cgai-chk"><input type="checkbox" id="cgai-auto"> 自动提交</label>
                     <label class="cgai-chk"><input type="checkbox" id="cgai-skip"> 跳过已满分</label>
-                    <label class="f">重试版本 <input type="number" id="cgai-att" min="1" max="5"></label>
+                    <label class="f">重试次数 <input type="number" id="cgai-att" min="1" max="5"></label>
                 </div>
                 <div class="cgai-btns">
                     <button class="cgai-btn cgai-btn-primary" id="cgai-solve">${ICON.run}<span>解本题</span></button>
@@ -1105,7 +1105,7 @@
                         <span class="hint" id="cfg-msg"></span></div>
                     <div class="cgai-field"><label>重试强模型（可选，失败时升级用）</label>
                         <select id="cfg-strong"></select><input id="cfg-strong-c" type="text" spellcheck="false" placeholder="自定义模型名（留空=不升级）" style="display:none">
-                        <span class="hint">主模型连错 3 次以上才会调用（需"重试版本"≥3）。换强模型那版会重置单题时间预算，给思考型模型充足时间。</span></div>
+                        <span class="hint">主模型连错 3 次以上才会调用（需"重试次数"≥3）。换强模型那版会重置单题时间预算，给思考型模型充足时间。</span></div>
                 </div>
                 <div class="cgai-btns"><button class="cgai-btn cgai-btn-primary" id="cfg-save">保存</button><button class="cgai-btn cgai-btn-ghost" id="cfg-cancel">取消</button></div>
             </div>
