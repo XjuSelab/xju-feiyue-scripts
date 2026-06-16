@@ -1,6 +1,6 @@
 # CLAUDE.md — xju-feiyue-scripts
 
-飞跃实验室（XjuSelab）的 Tampermonkey 用户脚本 monorepo。两个脚本 + 一个共享后端，统一通过 `feiyue.selab.top` 分发。
+软件开发实验室（XjuSelab）的 Tampermonkey 用户脚本 monorepo。两个脚本 + 一个共享后端，统一通过 `feiyue.selab.top` 分发。
 
 ## 仓库地图
 
