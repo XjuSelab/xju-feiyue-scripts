@@ -1,17 +1,16 @@
 <div align="center">
 
-# 飞跃·脚本
+# feiyue·scripts
 
-### xju-feiyue-scripts · 新疆大学软件开发实验室油猴脚本合集
+### xju-feiyue-scripts · 新疆大学软件开发实验室脚本猫合集
 
-<sub>Tampermonkey Userscripts · XjuSelab · Xinjiang University</sub>
+<sub>ScriptCat Userscripts · XjuSelab · Xinjiang University</sub>
 
-> 把重复的点击交给脚本，把时间留给真正要紧的事。<br/>
-> _One edge to ship them, Tampermonkey to keep them fresh._
+> _One edge to ship them, ScriptCat to keep them fresh._
 
 [![主页](https://img.shields.io/badge/主页-selab.top-2383E2?style=flat-square&logo=githubpages&logoColor=white)](https://selab.top)
 [![飞跃手册](https://img.shields.io/badge/飞跃手册-feiyue.selab.top-0F7B6C?style=flat-square&logo=cloudflare&logoColor=white)](https://feiyue.selab.top)
-![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485B?style=flat-square&logo=tampermonkey&logoColor=white)
+![ScriptCat](https://img.shields.io/badge/ScriptCat-脚本猫-00485B?style=flat-square)
 ![脚本](https://img.shields.io/badge/脚本-2-9065B0?style=flat-square&logo=javascript&logoColor=white)
 ![Open Source](https://img.shields.io/badge/Open%20Source-by%20default-37352F?style=flat-square&logo=git&logoColor=white)
 
@@ -19,7 +18,7 @@
 
 ---
 
-软件开发实验室（XjuSelab）维护的 Tampermonkey 用户脚本统一仓库。所有脚本通过 [`feiyue.selab.top`](https://feiyue.selab.top) 分发，Tampermonkey 经 `@updateURL` 自动更新。
+软件开发实验室（XjuSelab）维护的脚本猫（ScriptCat）用户脚本统一仓库。所有脚本通过 [`feiyue.selab.top`](https://feiyue.selab.top) 分发，脚本猫经 `@updateURL` 自动更新。
 
 ## 脚本列表 · Scripts
 
@@ -27,11 +26,11 @@
 
 | 脚本 | 技术 ID | 用途 | 安装 / 更新 |
 | :-- | :-- | :-- | :--: |
-| **飞跃·解题 Solver** | `feiyue-solver` | 希冀 CourseGrading（Java/OJ）AI 自动解题 → 自动提交 → 读判题；一键串行开刷、失败读样例多版本重试、自动跳题 | [![安装](https://img.shields.io/badge/安装-v2.4.3-00485B?style=flat-square&logo=tampermonkey&logoColor=white)](https://feiyue.selab.top/feiyue-solver.user.js) |
-| **飞跃·刷课 Grinder** | `feiyue-grinder` | 华为实习汁（小学期）全自动刷课：视频 + 课件 + 随堂测验 + 结课考试（题库优先 + AI 兜底，自带共享云题库 `feiyue-grinder-bank`） | [![安装](https://img.shields.io/badge/安装-v2.9.15-00485B?style=flat-square&logo=tampermonkey&logoColor=white)](https://feiyue.selab.top/feiyue-grinder.user.js) |
+| **飞跃·解题 Solver** | `feiyue-solver` | 希冀 CourseGrading（Java/OJ）AI 自动解题 → 自动提交 → 读判题；一键串行开刷、失败读样例多版本重试、自动跳题 | [![安装](https://img.shields.io/badge/安装-v2.4.3-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-solver.user.js) |
+| **飞跃·刷课 Grinder** | `feiyue-grinder` | 华为实习汁（小学期）全自动刷课：视频 + 课件 + 随堂测验 + 结课考试（题库优先 + AI 兜底，自带共享云题库 `feiyue-grinder-bank`） | [![安装](https://img.shields.io/badge/安装-v2.9.15-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-grinder.user.js) |
 | _飞跃·导入 import_ | — | 飞跃成绩单一键导入（**不在本仓**） | 由 [Aurash](https://github.com/winbeau/Aurash) 统一维护与部署 |
 
-> 点「安装」徽章，Tampermonkey 会弹出安装 / 更新页。装过的会自动检查更新（Cloudflare 边缘缓存 4h，手动强制可在链接后加 `?v=<版本>` 回源验证）。徽章上的版本号即当前发布版。
+> 点「安装」徽章，脚本猫会弹出安装 / 更新页。装过的会自动检查更新（Cloudflare 边缘缓存 4h，手动强制可在链接后加 `?v=<版本>` 回源验证）。徽章上的版本号即当前发布版。
 
 ## 目录结构 · Layout
 
