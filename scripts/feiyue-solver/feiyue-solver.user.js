@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.4.4
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。
+// @version      2.4.5
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -39,7 +39,7 @@
         THINKING: 'ds_thinking', AUTO_SUBMIT: 'cg_auto_submit', MAX_ATTEMPTS: 'cg_max_attempts',
         SKIP_PASSED: 'cg_skip_passed', GRIND: 'cg_grind_state', MODELS_CACHE: 'ds_models_cache', LOG: 'cgai_log',
     };
-    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.4';
+    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.5';
     const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
     const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
     const OJ = location.origin;
@@ -88,7 +88,7 @@
         connect: { lvl: 'err',  title: '连不上 API 服务器', body: '①脚本猫需「允许」到该域名的跨域连接（首次会弹窗，务必点允许）②确认该 API 在你的网络可达 ③Base URL 是否正确（GPT 代理通常要带 /v1）。', act: '去配置', go: 'config' },
         model:   { lvl: 'warn', title: '该模型不被接口支持', body: '当前模型不在该服务商/接口的支持列表（如火山「编程计划」仅支持部分模型）。换一个兼容模型后重试。', act: '去配置', go: 'config' },
         timeout: { lvl: 'warn', title: '请求超时', body: '模型长时间未给出完整响应。可重试、换更快的模型，或检查网络稳定性。', act: '看日志', go: 'log' },
-        stall:   { lvl: 'warn', title: '数据流疑似卡住', body: '已较长时间未收到新数据（不是在思考，而是真的停了）。可停止后重试，或更换模型/检查网络。', act: '看日志', go: 'log' },
+        stall:   { lvl: 'warn', title: '生成疑似卡住', body: '已在输出正文阶段、却较长时间没有新增内容（不是在思考，而是真的停了）。可停止后重试，或更换模型/检查网络。', act: '看日志', go: 'log' },
         empty:   { lvl: 'warn', title: '返回内容为空', body: '模型只输出了思考没给正文，或 max_tokens 被思考耗尽。可关思考模式或换模型重试。', act: '看日志', go: 'log' },
     };
     let activeBanners = {};            // kind -> { extra }
@@ -474,7 +474,15 @@
         }
         return [{ role: 'system', content: sys }, { role: 'user', content: user }];
     }
-    const STALL_FIRST = 20; // 秒：流中断超过该阈值视作「可能卡住」（区别于正常思考延迟）
+    const STALL_FIRST = 20; // 秒：生成阶段静默超过该阈值才视作「可能卡住」
+    const STALL_THINK = 35; // 秒：思考/等待阶段更宽容（推理模型常先静默/边思考边出，静默≠卡住），到阈值也只平静提示「仍在思考」
+    // 纯函数（可单测）：把(阶段, 静默秒数)映射成状态展示——把「思考 / 生成 / 卡住」判定集中一处，
+    // 关键：只有 gen（已在出正文）阶段的静默才报「可能卡住」并弹 banner；think/wait 阶段一律按「在思考/等待」处理，不误判为慢/卡住。
+    function streamStallState(phase, secs) {
+        if (phase === 'gen') return { info: `⚠ ${secs}s 无新增，可能卡住`, level: 'warn', banner: 'stall', log: `生成中断 ${secs}s（可能卡住）` };
+        if (phase === 'think') return { info: `🧠 仍在思考（已 ${secs}s 无新增，推理模型可能在静默推理）`, level: 'think', banner: null, log: `思考静默 ${secs}s（仍在推理，未判卡住）` };
+        return { info: `⏳ 等待响应 ${secs}s（推理模型可能正在思考）`, level: 'info', banner: null, log: `等待首个响应已 ${secs}s` };
+    }
     /* ---- SSE 解析（纯函数，可单测）：从「累积到目前的全文」整体重建 content/reasoning ---- */
     // 每次拿到的是累积全文，整段重解析：尾部不完整的一行 JSON.parse 失败被跳过，下次补全再解。
     function parseSSE(buf) {
@@ -507,16 +515,18 @@
         const payload = { model: opts.model, messages, stream: true, temperature: opts.temperature ?? 0, max_tokens: 8192 };
         if (/deepseek/i.test(baseURL)) payload.thinking = { type: opts.thinking ? 'enabled' : 'disabled' };
         return new Promise((resolve, reject) => {
-            let lastLen = -1, lastDataAt = Date.now(), hadData = false, settled = false, stallT = null;
+            let lastLen = -1, lastDataAt = Date.now(), hadData = false, settled = false, stallT = null, phase = 'wait';
             const fin = fn => { if (settled) return; settled = true; if (stallT) clearInterval(stallT); fn(); };
             const onText = txt => {
                 const r = parseSSE(txt);
                 if (!r.sawSSE) return;
                 const len = r.content.length + r.reasoning.length;
                 if (len !== lastLen) { lastLen = len; lastDataAt = Date.now(); if (len > 0) hadData = true; }
-                if (hooks && hooks.onProgress) hooks.onProgress({ phase: r.content ? 'gen' : 'think', reasoningLen: r.reasoning.length, contentLen: r.content.length });
+                phase = r.content ? 'gen' : (r.reasoning ? 'think' : 'wait'); // gen=已出正文 / think=只有思考 / wait=尚无任何 token
+                if (hooks && hooks.onProgress) hooks.onProgress({ phase, reasoningLen: r.reasoning.length, contentLen: r.content.length });
             };
-            stallT = setInterval(() => { const gap = Math.round((Date.now() - lastDataAt) / 1000); if (gap >= STALL_FIRST && hooks && hooks.onStall) hooks.onStall(gap, hadData); }, 1000);
+            // 阈值按阶段区分：生成阶段 20s 静默才算卡住；思考/等待阶段给到 35s 且只平静提示，避免把「在思考」误判成「响应慢/卡住」
+            stallT = setInterval(() => { const gap = Math.round((Date.now() - lastDataAt) / 1000); const thr = phase === 'gen' ? STALL_FIRST : STALL_THINK; if (gap >= thr && hooks && hooks.onStall) hooks.onStall(gap, hadData, phase); }, 1000);
             GM_xmlhttpRequest({
                 method: 'POST', url: baseURL + '/chat/completions', data: JSON.stringify(payload),
                 responseType: 'text', timeout: Math.max(8000, timeoutMs || 120000),
@@ -835,10 +845,11 @@
     function streamHooks() {
         let stalled = false;
         return {
-            onProgress: ({ phase, reasoningLen, contentLen }) => { stalled = false; _streamInfo = phase === 'gen' ? `生成中 ${fmtN(contentLen)}字` : `思考中 ${fmtN(reasoningLen)}字`; },
-            onStall: (secs, hadData) => {
-                _streamInfo = hadData ? `⚠ ${secs}s 无数据，可能卡住` : `⏳ 等待响应 ${secs}s`;
-                if (!stalled) { stalled = true; if (hadData) { LOG.push('warn', `数据流中断 ${secs}s（可能卡住）`); setBanner('stall'); } else LOG.push('warn', `等待首个响应已 ${secs}s`); }
+            onProgress: ({ phase, reasoningLen, contentLen }) => { stalled = false; _streamInfo = phase === 'gen' ? `生成中 ${fmtN(contentLen)}字` : (phase === 'think' ? `思考中 ${fmtN(reasoningLen)}字` : '等待响应…'); },
+            onStall: (secs, hadData, phase) => {
+                const st = streamStallState(phase, secs);
+                _streamInfo = st.info;
+                if (!stalled) { stalled = true; LOG.push(st.level, st.log); if (st.banner) setBanner(st.banner); }
             },
         };
     }
@@ -1207,7 +1218,7 @@
     GM_registerMenuCommand('停止开刷 / 清除进度', () => { clearGrind(); if (grindEl) renderGrind(); if (statusEl) setStatus('已清除开刷进度。', ''); if (btnGrind) refreshButtons(); });
 
     if (typeof window !== 'undefined' && window.__CGAI_EXPOSE__) {
-        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE };
+        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState };
     }
 
     function boot() {
