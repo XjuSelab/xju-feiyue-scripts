@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.4.3
-// @description  希冀(CourseGrading/educg) 编程/填空/接口题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。
+// @version      2.4.4
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -39,11 +39,11 @@
         THINKING: 'ds_thinking', AUTO_SUBMIT: 'cg_auto_submit', MAX_ATTEMPTS: 'cg_max_attempts',
         SKIP_PASSED: 'cg_skip_passed', GRIND: 'cg_grind_state', MODELS_CACHE: 'ds_models_cache', LOG: 'cgai_log',
     };
-    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.3';
+    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.4';
     const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
     const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
     const OJ = location.origin;
-    const PAGE_OF = { file: 'programList.jsp', iface: 'programWithInterfaceList.jsp', gap: 'programFillGapList.jsp' };
+    const PAGE_OF = { file: 'programList.jsp', ce: 'programList_ce.jsp', iface: 'programWithInterfaceList.jsp', gap: 'programFillGapList.jsp' };
 
     const getKey = () => (GM_getValue(STORE.KEY, '') || '').trim();
     const getBaseURL = () => (GM_getValue(STORE.BASE_URL, DEFAULTS.baseURL) || DEFAULTS.baseURL).trim().replace(/\/+$/, '');
@@ -103,6 +103,7 @@
         const h = location.pathname + location.search;
         if (/programFillGapList\.jsp/i.test(h)) return 'gap';
         if (/programWithInterfaceList\.jsp/i.test(h)) return 'iface';
+        if (/programList_ce\.jsp/i.test(h)) return 'ce';   // 在线代码编辑器题（programList.jsp 对部分题会 302 跳到 _ce）
         if (/programList\.jsp/i.test(h)) return 'file';
         return null;
     }
@@ -314,15 +315,21 @@
             .replace(/<li[^>]*>/gi, ' - ').replace(/<[^>]+>/g, '')
             .replace(/&nbsp;/gi, ' ').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"')
             .replace(/&#39;|&apos;/gi, "'").replace(/&amp;/gi, '&').replace(/ /g, ' ')
-            .replace(/ /g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+            .replace(/ /g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
     }
     function titleOf() {
         const a = document.querySelector('.breadcrumb .breadcrumb-item.active');
         if (a) return a.textContent.replace(/\s+/g, ' ').trim();
+        // _ce 在线编辑题无面包屑：题号标题在描述区首行（如「3. 求最大公约数」）
+        const ce = document.querySelector('#cgcode_description-content') || document.querySelector('[id*="description-content"]');
+        if (ce) { const first = (ce.textContent || '').split('\n').map(s => s.trim()).filter(Boolean)[0]; if (first) return first.replace(/\s+/g, ' ').trim(); }
         return (document.title || '').replace(/CourseGrading|详细评判信息[:：]?/g, '').trim() || '(题目)';
     }
-    // 普通编程题/接口题：面包屑与首个 <hr> 之间的题面
+    // 题面：_ce 在线编辑题取描述容器；普通编程题/接口题取面包屑与首个 <hr> 之间
     function extractStatement() {
+        // _ce（programList_ce.jsp）是组件化布局（cgcode_*），无 .col-10/面包屑，题面在稳定 id 的描述容器里
+        const ce = document.querySelector('#cgcode_description-content') || document.querySelector('[id*="description-content"]');
+        if (ce) return htmlToText(ce.innerHTML);
         const col = document.querySelector('#cgcontainerID .col-10') || document.querySelector('.col-10') || document.body;
         const nav = col.querySelector('nav[aria-label="breadcrumb"]');
         let html = '';
@@ -386,7 +393,7 @@
     // 因此必须按「页型 + proNum」去重/标识，不能只按 proNum（否则会丢题、key 冲突）
     function parseAssignProblems(html, assignID) {
         const seen = new Set(), items = [];
-        const re = /(programList|programFillGapList|programWithInterfaceList)\.jsp\?([^"'\s>]+)/g; let m;
+        const re = /(programList_ce|programList|programFillGapList|programWithInterfaceList)\.jsp\?([^"'\s>]+)/g; let m; // programList_ce 须在 programList 前（否则 _ce 链接只匹配到 programList 再卡在 \.jsp 失败）
         while ((m = re.exec(html))) {
             const page = m[1] + '.jsp', q = m[2];
             const pn = (q.match(/proNum=(\d+)/) || [])[1], aid = (q.match(/assignID=(\d+)/) || [])[1];
@@ -576,6 +583,16 @@
         Object.keys(answers).forEach(k => p.set('answer' + k, answers[k]));
         return gmSubmit(`${OJ}/assignment/showProcessMsg.jsp`, p.toString(), { 'Content-Type': 'application/x-www-form-urlencoded' });
     }
+    // _ce 在线代码编辑器题：源码走表单字段 cgsoucecode + byCE（页面无 FILE1 文件框），实测与 programList 同判题端点
+    function submitCE(ids, code, mainClass) {
+        const wtime = Math.max(1, Math.round((Date.now() - pageT0) / 1000));
+        const p = new URLSearchParams();
+        p.set('doSubmit', 'true'); p.set('byCE', 'true'); p.set('wtime', String(wtime));
+        p.set('progLanguage', 'java'); p.set('javaMainCLass', mainClass || 'Main');
+        p.set('problemID', ids.problemID); p.set('assignID', ids.assignID);
+        p.set('cgsoucecode', code);
+        return gmSubmit(`${OJ}/assignment/showProcessMsg.jsp`, p.toString(), { 'Content-Type': 'application/x-www-form-urlencoded' });
+    }
     // 提交后让页面自带的「运行结果」iframe 播放原生判题动画（GM_xhr 提交本身不触发它）
     function showNativeProgress(ids) {
         const fr = document.getElementById('showmessageFRAME') || document.getElementById('showmessageFrame') || document.querySelector('iframe[name^="showmessage"]');
@@ -583,6 +600,15 @@
     }
     // 仅「关闭自动提交」时用：填进页面表单让用户自己点提交
     function fillOnly(code, mainClass) {
+        // _ce 在线编辑题：把代码灌进编辑器（textarea + 其上的 CodeMirror 实例），让用户自己点提交
+        const ceEl = document.getElementById('cgsoucecode');
+        if (ceEl) {
+            ceEl.value = code;
+            const cmHost = document.querySelector('.CodeMirror');
+            if (cmHost && cmHost.CodeMirror) { try { cmHost.CodeMirror.setValue(code); } catch (_) {} }
+            ceEl.dispatchEvent(new Event('input', { bubbles: true }));
+            return;
+        }
         const fileInput = document.getElementById('CGFILE'), mainEl = document.getElementById('javamanclass');
         if (mainEl && mainClass) mainEl.value = mainClass;
         if (fileInput) { const simple = (mainClass || 'Main').split('.').pop(); const dt = new DataTransfer(); dt.items.add(new File([code], simple + '.java', { type: 'text/x-java' })); fileInput.files = dt.files; fileInput.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -756,7 +782,9 @@
                     const code = parseJavaCode(raw);
                     if (!/class\s+\w+/.test(code)) throw new Error('生成结果不是有效 Java');
                     const mainClass = (kind === 'iface' && problem.mainClass) ? problem.mainClass : detectMainClass(code);
-                    display = code; await submitFile(ids, code, mainClass);
+                    display = code;
+                    if (kind === 'ce') await submitCE(ids, code, mainClass);   // 在线编辑题走 cgsoucecode/byCE
+                    else await submitFile(ids, code, mainClass);
                 }
                 LOG.push('info', '已提交，等待判题…');
                 showNativeProgress(ids); // 恢复页面原生判题动画
@@ -831,7 +859,7 @@
         if ((r.passed || 0) > 0) return ICON.warn + `部分通过 ${r.passed}/${r.total}` + (r.score ? ` · 得分 ${r.score}` : '');
         return ICON.err + (r.error ? '失败：' + r.error : '未通过');
     }
-    const KIND_CN = { file: '编程题', iface: '接口题', gap: '填空题' };
+    const KIND_CN = { file: '编程题', ce: '编程题(在线编辑)', iface: '接口题', gap: '填空题' };
     const MODE_CN = { normal: '直接解', fix: '纠错', sample: '面向样例', escalate: '升级强模型' };
 
     async function runSolveCurrent() {
@@ -884,7 +912,9 @@
     // 队列项唯一键含页型（同 assign 跨题型 proNum 会重复）
     const itemKey = it => it.assignID + '|' + it.page + '|' + it.proNum;
     const TAG = pg => /FillGap/i.test(pg) ? '填' : /Interface/i.test(pg) ? '接' : '编';
-    function navTo(it) { location.assign(`/assignment/${it.page}?proNum=${it.proNum}&assignID=${it.assignID}`); }
+    // 队列里 programList.jsp 的题可能 302 跳到 programList_ce.jsp（同一题两种 URL），匹配当前页时视作同一页型
+    const pageEq = (a, b) => String(a).replace(/_ce(?=\.jsp)/i, '') === String(b).replace(/_ce(?=\.jsp)/i, '');
+    function navTo(it) { const extra = /_ce\.jsp/i.test(it.page) ? '&libCenter=false' : ''; location.assign(`/assignment/${it.page}?proNum=${it.proNum}&assignID=${it.assignID}${extra}`); }
     async function startGrind() {
         if (!ensureConfig()) return;
         tickStatus('正在读取作业列表并校验题目链接…');
@@ -903,7 +933,7 @@
         let rows = '', full = 0;
         g.queue.forEach(it => {
             const k = itemKey(it), r = g.done[k];
-            const isCur = it.assignID === cur.assignID && it.page === curPage && String(it.proNum) === String(cur.proNum);
+            const isCur = it.assignID === cur.assignID && pageEq(it.page, curPage) && String(it.proNum) === String(cur.proNum);
             let cls = '', ic = '', sc = '';
             if (r) {
                 if (r.ok || r.skipped) full++;
@@ -921,7 +951,7 @@
         if (busy) return; busy = true; refreshButtons();
         try {
             const cur = getCur(), kind = pageType(), curPage = PAGE_OF[kind] || '';
-            const qi = g.queue.findIndex(it => it.assignID === cur.assignID && it.page === curPage && String(it.proNum) === String(cur.proNum));
+            const qi = g.queue.findIndex(it => it.assignID === cur.assignID && pageEq(it.page, curPage) && String(it.proNum) === String(cur.proNum));
             if (qi < 0) { const nxt = g.queue.find(it => !g.done[itemKey(it)]); if (nxt) navTo(nxt); else finishGrind(g); return; }
             const item = g.queue[qi], k = itemKey(item), klabel = `${item.assignID}${TAG(item.page)}:${item.proNum}`, s = g.settings || settings();
             if (!g.done[k]) {
