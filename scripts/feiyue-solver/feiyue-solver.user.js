@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.4.5
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。
+// @version      2.4.6
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -39,7 +39,7 @@
         THINKING: 'ds_thinking', AUTO_SUBMIT: 'cg_auto_submit', MAX_ATTEMPTS: 'cg_max_attempts',
         SKIP_PASSED: 'cg_skip_passed', GRIND: 'cg_grind_state', MODELS_CACHE: 'ds_models_cache', LOG: 'cgai_log',
     };
-    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.5';
+    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.6';
     const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
     const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
     const OJ = location.origin;
@@ -476,6 +476,7 @@
     }
     const STALL_FIRST = 20; // 秒：生成阶段静默超过该阈值才视作「可能卡住」
     const STALL_THINK = 35; // 秒：思考/等待阶段更宽容（推理模型常先静默/边思考边出，静默≠卡住），到阈值也只平静提示「仍在思考」
+    const STALL_HARD = 60;  // 秒：生成阶段静默到此硬阈值且已有正文，主动收口已拿到的正文（避免服务端流完不发 [DONE] 又不关连接时干等到超时）
     // 纯函数（可单测）：把(阶段, 静默秒数)映射成状态展示——把「思考 / 生成 / 卡住」判定集中一处，
     // 关键：只有 gen（已在出正文）阶段的静默才报「可能卡住」并弹 banner；think/wait 阶段一律按「在思考/等待」处理，不误判为慢/卡住。
     function streamStallState(phase, secs) {
@@ -510,41 +511,77 @@
 
     // 流式调用：边收边解，实时回调 hooks.onProgress({phase,reasoningLen,contentLen}) 与 hooks.onStall(secs,hadData)。
     // 解决根因：stream:false 时长生成会整段缓冲、连接空闲常被掐 → 「无响应」；流式让数据持续流入，并能区分「思考 / 生成 / 真卡住」。
+    // v2.4.6：用 responseType:'stream' 自己读 ReadableStream —— 脚本猫(ScriptCat,MV3)默认 responseType:'text' 走后台原生 XHR，
+    //   正文只在 onload 一次性回传、onprogress 期间拿不到中间文本（假流式/整段缓冲）；唯有 stream 路径(FetchXHR)按网络 chunk 推送，才是真增量。
+    //   注意：脚本猫 content 端的流不会被 close()（只在 DONE 置 undefined GC），故读流只当「实时进度喂料」，最终收口仍走 onload（此时 chunk 已全部入队，
+    //   消息间的 microtask 已把缓冲读全）。拿不到流的管理器(VM/GM/老版)自动回退 responseText —— 退化为整段返回但答案仍正确，绝不回归。
     function callLLM(messages, opts, apiKey, timeoutMs, hooks) {
         const baseURL = getBaseURL(), host = baseURL.replace(/^https?:\/\//, '');
         const payload = { model: opts.model, messages, stream: true, temperature: opts.temperature ?? 0, max_tokens: 8192 };
         if (/deepseek/i.test(baseURL)) payload.thinking = { type: opts.thinking ? 'enabled' : 'disabled' };
         return new Promise((resolve, reject) => {
             let lastLen = -1, lastDataAt = Date.now(), hadData = false, settled = false, stallT = null, phase = 'wait';
-            const fin = fn => { if (settled) return; settled = true; if (stallT) clearInterval(stallT); fn(); };
+            let streamBuf = '', gotStream = false, lastContent = '', reader = null, grabbed = false, ticks = 0;
+            const dec = (typeof TextDecoder !== 'undefined') ? new TextDecoder('utf-8') : null;
+            const fin = fn => { if (settled) return; settled = true; if (stallT) clearInterval(stallT); if (reader) { try { reader.cancel(); } catch (_) {} } fn(); };
             const onText = txt => {
                 const r = parseSSE(txt);
                 if (!r.sawSSE) return;
                 const len = r.content.length + r.reasoning.length;
-                if (len !== lastLen) { lastLen = len; lastDataAt = Date.now(); if (len > 0) hadData = true; }
+                if (len !== lastLen) { lastLen = len; lastDataAt = Date.now(); if (len > 0) { hadData = true; ticks++; } }
+                lastContent = r.content;
                 phase = r.content ? 'gen' : (r.reasoning ? 'think' : 'wait'); // gen=已出正文 / think=只有思考 / wait=尚无任何 token
                 if (hooks && hooks.onProgress) hooks.onProgress({ phase, reasoningLen: r.reasoning.length, contentLen: r.content.length });
             };
-            // 阈值按阶段区分：生成阶段 20s 静默才算卡住；思考/等待阶段给到 35s 且只平静提示，避免把「在思考」误判成「响应慢/卡住」
-            stallT = setInterval(() => { const gap = Math.round((Date.now() - lastDataAt) / 1000); const thr = phase === 'gen' ? STALL_FIRST : STALL_THINK; if (gap >= thr && hooks && hooks.onStall) hooks.onStall(gap, hadData, phase); }, 1000);
+            // 读 ReadableStream（脚本猫/TM 在 responseType:'stream' 下给的真增量流），增量解码喂给 onText。只读一次，settle 后 cancel。
+            const pump = rs => {
+                if (grabbed || !rs || typeof rs.getReader !== 'function') return;
+                grabbed = true;
+                try { reader = rs.getReader(); } catch (_) { return; }
+                const step = () => reader.read().then(({ done, value }) => {
+                    if (settled) { try { reader.cancel(); } catch (_) {} return; }
+                    if (done) return;                       // TM 会 close 流到此结束；脚本猫不 close → 永挂 read()，靠 onload 收口 + settle 时 cancel
+                    if (value != null) {
+                        const chunk = (typeof value === 'string') ? value : (dec ? dec.decode(value, { stream: true }) : '');
+                        if (chunk) { streamBuf += chunk; gotStream = true; onText(streamBuf); }
+                    }
+                    step();
+                }).catch(() => {});
+                step();
+            };
+            // 阈值按阶段区分：生成阶段 20s 静默才提示「可能卡住」；思考/等待阶段给到 35s 且只平静提示，避免把「在思考」误判成「响应慢/卡住」。
+            // 生成阶段静默到 STALL_HARD(60s) 且已有正文：主动收口已拿到的正文（服务端流完不发 [DONE] 又不关连接时不再干等到超时）。
+            stallT = setInterval(() => {
+                const gap = Math.round((Date.now() - lastDataAt) / 1000);
+                if (phase === 'gen' && gap >= STALL_HARD && hadData && lastContent) return fin(() => resolve(lastContent));
+                const thr = phase === 'gen' ? STALL_FIRST : STALL_THINK;
+                if (gap >= thr && hooks && hooks.onStall) hooks.onStall(gap, hadData, phase);
+            }, 1000);
             GM_xmlhttpRequest({
                 method: 'POST', url: baseURL + '/chat/completions', data: JSON.stringify(payload),
-                responseType: 'text', timeout: Math.max(8000, timeoutMs || 120000),
+                responseType: 'stream', timeout: Math.max(8000, timeoutMs || 120000),
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'Accept': 'text/event-stream' },
-                onprogress: e => { try { const t = e && (typeof e.responseText === 'string' ? e.responseText : (typeof e.response === 'string' ? e.response : null)); if (t != null) onText(t); } catch (_) {} },
+                onloadstart: r => { try { if (r && r.response) pump(r.response); } catch (_) {} },
+                onreadystatechange: r => { try { if (!grabbed && r && r.response && r.readyState >= 2) pump(r.response); } catch (_) {} },
+                onprogress: e => { try { if (!grabbed && e && e.response) pump(e.response); const t = (e && typeof e.responseText === 'string') ? e.responseText : null; if (t) onText(t); } catch (_) {} },
                 onload: r => fin(() => {
                     if (r.status === 401) return reject(llmErr('API Key 无效 (401)，请到配置页检查', 'auth'));
-                    if (r.status === 0) return reject(llmErr(`连不上 ${host}（浏览器能否访问该 API？脚本猫是否已允许跨域连接？）`, 'connect'));
-                    const body = r.responseText || '', p = parseSSE(body);
+                    // 收口：优先用自己读到的流式累积文本（脚本猫真增量）；拿不到则退回 responseText/response（非 stream 管理器一次性给）
+                    const body = (gotStream && streamBuf) ? streamBuf
+                        : (typeof r.responseText === 'string' && r.responseText) ? r.responseText
+                        : (typeof r.response === 'string' && r.response) ? r.response : streamBuf;
+                    if (hooks && hooks.onStreamMode) hooks.onStreamMode(gotStream, ticks); // 探针：本次是真增量还是退化为整段（拿真机实据）
+                    if (r.status === 0 && !body) return reject(llmErr(`连不上 ${host}（浏览器能否访问该 API？脚本猫是否已允许跨域连接？）`, 'connect'));
+                    const p = parseSSE(body);
                     if (p.sawSSE) {                       // 正常流式
-                        if (p.content) return resolve(p.content);
+                        if (p.content) { if (p.errObj && hooks && hooks.onServerError) hooks.onServerError(p.errObj); return resolve(p.content); }
                         if (p.errObj) return reject(llmErr(`${host} 返回错误：${p.errObj.message || p.errObj.code || JSON.stringify(p.errObj)}`, /model/i.test(JSON.stringify(p.errObj)) ? 'model' : 'http'));
                         return reject(llmErr('返回内容为空（仅有思考无正文，或 max_tokens 被思考耗尽）', 'empty'));
                     }
                     // 非 SSE：服务商忽略了 stream:true，按普通 JSON 处理（成功或错误体）
                     let d = null; try { d = JSON.parse(body); } catch (_) {}
                     if (d && d.error) { const m = d.error.message || d.error.code || ''; return reject(llmErr(`${host} 返回错误：${m}`, /model|UnsupportedModel/i.test(JSON.stringify(d.error)) ? 'model' : 'http', `HTTP ${r.status}`)); }
-                    if (r.status !== 200) return reject(llmErr(`API ${r.status}: ${body.slice(0, 200)}`, r.status === 404 ? 'model' : 'http'));
+                    if (r.status !== 200) return reject(llmErr(`API ${r.status}: ${String(body).slice(0, 200)}`, r.status === 404 ? 'model' : 'http'));
                     const c = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
                     if (!c) return reject(llmErr('返回内容为空（max_tokens 不足或思考耗尽）', 'empty'));
                     resolve(c);
@@ -831,7 +868,7 @@
 
     /* ============================ UI ============================ */
     let panel, fab, statusEl, titleEl, codeWrap, verdictEl, grindEl, btnSolve, btnGrind, busy = false, _tick = null;
-    let bellEl, bellDot, logListEl, bannerWrap, _streamInfo = '';
+    let bellEl, bellDot, logListEl, bannerWrap, _streamInfo = '', _streamProbed = false;
 
     function setStatus(text, kind, spin) { if (_tick) { clearInterval(_tick); _tick = null; } _streamInfo = ''; statusEl.onclick = null; statusEl.style.cursor = ''; statusEl.className = kind || ''; statusEl.innerHTML = (spin ? '<span class="cgai-spin"></span>' : '') + text; }
     function tickStatus(prefix, kind) {
@@ -851,6 +888,14 @@
                 _streamInfo = st.info;
                 if (!stalled) { stalled = true; LOG.push(st.level, st.log); if (st.banner) setBanner(st.banner); }
             },
+            // 探针：首次调用后记录本管理器到底拿没拿到「中间文本」（真增量 vs 整段缓冲）——给真机实据，只记一次
+            onStreamMode: (real, ticks) => {
+                if (_streamProbed) return; _streamProbed = true;
+                if (real) LOG.push('info', `流式探针：真增量流式生效（本次实时更新 ${ticks} 次，responseType:stream 已被管理器支持）`);
+                else LOG.push('warn', '流式探针：本次未拿到中间文本，退化为整段返回（当前管理器可能不支持 responseType:stream；最终结果正确，仅缺逐字进度）');
+            },
+            // 服务端在流中已给正文又附带 error 事件：按已有正文继续，但记一条原始 error 防丢失归因
+            onServerError: (errObj) => { LOG.push('warn', `服务端在流中报错但已有正文，按已有正文继续：${(errObj && (errObj.message || errObj.code)) || JSON.stringify(errObj)}`); },
         };
     }
     // 错误 .kind → 新手引导式 banner
@@ -1218,7 +1263,7 @@
     GM_registerMenuCommand('停止开刷 / 清除进度', () => { clearGrind(); if (grindEl) renderGrind(); if (statusEl) setStatus('已清除开刷进度。', ''); if (btnGrind) refreshButtons(); });
 
     if (typeof window !== 'undefined' && window.__CGAI_EXPOSE__) {
-        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState };
+        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState, callLLM, getBaseURL };
     }
 
     function boot() {
