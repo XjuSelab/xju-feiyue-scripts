@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.4.6
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。
+// @version      2.5.0
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -39,7 +39,7 @@
         THINKING: 'ds_thinking', AUTO_SUBMIT: 'cg_auto_submit', MAX_ATTEMPTS: 'cg_max_attempts',
         SKIP_PASSED: 'cg_skip_passed', GRIND: 'cg_grind_state', MODELS_CACHE: 'ds_models_cache', LOG: 'cgai_log',
     };
-    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.4.6';
+    const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.5.0';
     const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
     const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
     const OJ = location.origin;
@@ -768,7 +768,9 @@
 
     /* ============================ 解一题（多版本 + 失败读样例） ============================ */
     const PROBLEM_BUDGET_MS = 180000; // 单题总时长上限，超时自动跳过
-    const SAMPLE_DIRECTIVE = '\n\n特别提示：本题描述可能有歧义、或评测就按这些样例来。如果你仍无法从题意推导出通用正确解法，请【面向样例编程】——针对上面各失败测试点的「期望输出」，用条件判断/查表等方式让程序对这些情形给出正确结果（仍必须能正常编译运行，并尽量兼顾未列出的情形）。只输出完整代码/JSON，不要解释。';
+    // v2.5.0：旧版鼓励「打表/逐例特判」匹配可见失败点 → 隐藏用例几乎必挂（难题正确率下降主因之一）。
+    // 改为：用失败样例反推「通用规则/边界」写通解，并明确警告硬编码会在隐藏用例上失败。
+    const SAMPLE_DIRECTIVE = '\n\n特别提示：你已多次未通过，很可能是**误解了题意或漏了边界条件**。请仔细对照上面各失败测试点的「输入 → 期望输出」，反推出题目真正的通用规则/边界，写出对所有情形都成立的**通解**。⚠️评测有大量隐藏测试用例，只硬编码/打表匹配上面这几个可见点，几乎必然在隐藏用例上失败——除非你**确信**本题就只有这有限几种情形，否则不要打表、不要逐例特判。只输出完整代码/JSON，不要解释。';
     // 版本计划：v1 直接解；v2 同对话同模型按样例纠错；v3「面向样例编程」；主模型连错≥3次后追加一版「升级强模型」(干净上下文+重置单题预算)
     function planFor(s) {
         const N = Math.max(1, +s.maxAttempts || 1), strong = s.strongModel || s.model;
@@ -784,19 +786,19 @@
             plan.push({ model: strong, thinking: true, temperature: 0, mode: 'escalate', escalate: true, resetBudget: true, compactBefore: true });
         return plan;
     }
-    // 同题内上下文压缩：丢弃中间累积，只留 [system, 题目, 最近一版输出, 最近一次反馈]。纯函数，可离线单测。
+    // 同题内上下文压缩：保留 base + 「最近两轮」(各版代码 + 失败反馈)，丢更早的累积。纯函数，可离线单测。
+    // v2.5.0：旧版只留「最近一轮」→ 难题多版纠错时模型「失忆」、反复踩同一坑、只盯最近一批失败点
+    //   （v2.4.0 起难题正确率下降的主因之一）。现保留最近两轮，让模型记得上一版试过什么、避免重复，仍显著省 token。
     function compactMessages(messages, problem) {
         const base = buildMessages(problem); // [system, user(题目)]，权威重建，不复用可能被污染的旧 system
-        let lastAssistant = null, lastUserAfter = null;
-        for (let j = messages.length - 1; j >= 2; j--) { // j>=2 跳过 base 的 system/题目
-            const m = messages[j];
-            if (m.role === 'user' && !lastAssistant && !lastUserAfter) lastUserAfter = m;
-            else if (m.role === 'assistant' && !lastAssistant) { lastAssistant = m; break; }
-        }
-        const out = base.slice(); // [system, 题目]
-        if (lastAssistant) out.push(lastAssistant); // 最近一版输出（即便无效也带上，反馈里已说明问题）
-        if (lastUserAfter) out.push(lastUserAfter); // 最近一次反馈（verdict 报错 / feedbackFromHtml / 「上次输出有问题…」）
-        else if (lastAssistant) out.push({ role: 'user', content: '上次提交未通过，请修正后重新输出完整、可编译运行的答案。' }); // 末轮贴 deadline 时 messages 以 assistant 收尾、无后续反馈：补一句保证对话以 user 结束，否则升级强模型那版 payload 以 assistant 结尾→部分服务商(如 deepseek-reasoner) 返回 400
+        const tail = messages.slice(2);      // base 的 system/题目 之后的累积对话
+        const asst = []; for (let j = 0; j < tail.length; j++) if (tail[j].role === 'assistant') asst.push(j);
+        // 从倒数第 2 个 assistant 起保留 = 最近两轮(代码+反馈)；不足两轮则尽量多留
+        const start = asst.length >= 2 ? asst[asst.length - 2] : (asst.length ? asst[0] : tail.length);
+        const out = base.concat(tail.slice(start));
+        // 保证以 user 结尾：末轮贴 deadline 时可能以 assistant 收尾，部分 reasoner 对 assistant 结尾 payload 返回 400
+        if (out.length > base.length && out[out.length - 1].role === 'assistant')
+            out.push({ role: 'user', content: '上次提交未通过，请修正后重新输出完整、可编译运行的答案。' });
         return out;
     }
     // 多版本：同对话累积「代码→错误样例→纠正代码→…」；每连错2次压缩上下文；连错≥3次后追加版换强模型(重置预算+干净上下文)
@@ -811,7 +813,7 @@
             const opt = plan[i];
             if (opt.resetBudget) deadline = Date.now() + PROBLEM_BUDGET_MS; // 升级强模型：重置单题时间预算（须先于下面的超时判定，否则被原余量误杀）
             if (deadline - Date.now() < 15000) { timedOut = true; break; } // 单题不足 15s 不再起新一版
-            if (opt.compactBefore) messages = compactMessages(messages, problem); // 升级前压成干净上下文：题目+最近错代码+最近报错
+            if (opt.compactBefore) messages = compactMessages(messages, problem); // 升级前压成干净上下文：题目+最近两轮代码与失败反馈
             onAttempt && onAttempt(i + 1, plan.length, opt);
             let res;
             try {
@@ -847,7 +849,7 @@
                         : (feedbackFromHtml(await fetchFailDetail(ids.assignID, ids.problemID)) || '上次提交未通过，请仔细修正后重新输出完整答案。');
                     if (plan[i + 1] && plan[i + 1].mode === 'sample') fb += SAMPLE_DIRECTIVE; // 下一版起面向样例
                     messages.push({ role: 'user', content: fb });
-                    if (failStreak % 2 === 0) messages = compactMessages(messages, problem); // 每连错2次压缩：只留题目+最近错代码+最近报错
+                    if (failStreak % 2 === 0) messages = compactMessages(messages, problem); // 每连错2次压缩：只留题目+最近两轮代码与失败反馈
                 }
             } catch (e) {
                 res = { ok: false, error: e.message, passed: 0, total: 0, score: null, attempt: i + 1 };
