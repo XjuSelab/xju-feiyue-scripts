@@ -1194,7 +1194,10 @@
     $('#sxz-meta').addEventListener('click', (e) => { const c = e.target.closest('[data-act]'); if (!c) return; if (c.dataset.act === 'cfg') openCfg(true); else if (c.dataset.act === 'mute') { CFG.mute = !CFG.mute; saveCfg(); sendCmd('mute', CFG.mute); renderState(lastState); } });
     ps.onchange = () => { CFG.provider = ps.value; saveCfg(); fill(); sendCmd('cfgReload'); renderState(lastState); };
     $('#cf-save').onclick = () => {
-      CFG.provider = ps.value; CFG.baseURL = $('#cf-base').value.trim(); CFG.model = pickModel($('#cf-modelsel'), $('#cf-model'), activeProvider().model); CFG.thinking = $('#cf-think').checked; CFG.keys[CFG.provider] = $('#cf-key').value.trim();
+      CFG.provider = ps.value; CFG.baseURL = $('#cf-base').value.trim();
+      CFG.model = pickModel($('#cf-modelsel'), $('#cf-model'), activeProvider().model);
+      if (CFG.model === activeProvider().model) CFG.model = ''; // 选中=服务商默认 → 存空,保留"跟随预设默认"语义(切服务商自动跟随,不被钉死)
+      CFG.thinking = $('#cf-think').checked; CFG.keys[CFG.provider] = $('#cf-key').value.trim();
       CFG.autoNext = $('#cf-autonext').checked; CFG.quizAuto = $('#cf-quizauto').checked; CFG.cwDwellSec = +$('#cf-dwell').value || 8; CFG.quizRetryMax = +$('#cf-retry').value || 0; CFG.autoFinalTest = $('#cf-final').checked; CFG.force = $('#cf-force').checked; CFG.answerSource = $('#cf-src').value;
       const raw = $('#cf-bank').value.trim(); try { BANK = raw ? JSON.parse(raw) : {}; GM_setValue('sxz_bank', raw); $('#sxz-cfgmsg').textContent = '✓ 已保存'; } catch (e) { $('#sxz-cfgmsg').textContent = '题库JSON格式错误,其余已存'; }
       saveCfg(); sendCmd('cfgReload'); renderState(lastState);
