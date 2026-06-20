@@ -9,7 +9,7 @@
 > 教务页一个悬浮按钮：导出成绩单 PDF → 回传飞跃 → 自动出学分报告。<br/>
 > _One button on the jwxt grade page — export → stash → parsed credits, no password touched._
 
-[![安装 / 更新](https://img.shields.io/badge/安装_·_更新-v1.6.0-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-importer.user.js)
+[![安装 / 更新](https://img.shields.io/badge/安装_·_更新-v1.6.1-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-importer.user.js)
 [![飞跃手册](https://img.shields.io/badge/飞跃手册-feiyue.selab.top-0F7B6C?style=flat-square&logo=cloudflare&logoColor=white)](https://feiyue.selab.top)
 [![源码](https://img.shields.io/badge/源码-xju--feiyue--scripts-2383E2?style=flat-square&logo=github&logoColor=white)](https://github.com/XjuSelab/xju-feiyue-scripts)
 ![grant none](https://img.shields.io/badge/@grant-none-9065B0?style=flat-square)
@@ -25,7 +25,7 @@
 脚本猫里访问安装链接（**带 `?v=` 绕过 Cloudflare 缓存**）：
 
 ```
-https://feiyue.selab.top/feiyue-importer.user.js?v=160
+https://feiyue.selab.top/feiyue-importer.user.js?v=161
 ```
 
 > 也可在飞跃「学分统计」页的**导入向导**里点「安装脚本」一键装（向导会自动检测安装状态并前进）。
