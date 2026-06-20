@@ -12,7 +12,7 @@
 [![飞跃手册](https://img.shields.io/badge/飞跃手册-feiyue.selab.top-0F7B6C?style=flat-square&logo=cloudflare&logoColor=white)](https://feiyue.selab.top)
 ![ScriptCat](https://img.shields.io/badge/ScriptCat-脚本猫-00485B?style=flat-square)
 ![脚本](https://img.shields.io/badge/脚本-3-9065B0?style=flat-square&logo=javascript&logoColor=white)
-![Open Source](https://img.shields.io/badge/Open%20Source-by%20default-37352F?style=flat-square&logo=git&logoColor=white)
+[![License](https://img.shields.io/badge/License-MIT-37352F?style=flat-square)](./LICENSE)
 
 </div>
 
@@ -62,6 +62,10 @@ docs/                # 开发文档 + 踩坑记录
 | [CONVENTIONS.md](./CONVENTIONS.md) | 命名（工具系 `-er`）/ 版本 / `@updateURL` / 身份 / 部署 规范 |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | 两脚本架构 / 答题来源链 / feiyue-grinder-bank / 测试 / 部署 / CDP 调试 |
 | [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) | **★ 踩过的坑 & 解法**（改动前必读：全选 A / 题库 0 命中 / 暂停失效 / 不自动更新 / 二跳部署 …） |
+
+## 许可 · License
+
+本仓所有脚本与代码以 [MIT](./LICENSE) 协议开源。© 2026 XjuSelab（新疆大学软件开发实验室）
 
 ---
 
