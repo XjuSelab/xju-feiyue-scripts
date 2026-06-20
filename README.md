@@ -26,8 +26,8 @@
 
 | 脚本 | 技术 ID | 用途 | 安装 / 更新 |
 | :-- | :-- | :-- | :--: |
-| **飞跃·解题 Solver** | `feiyue-solver` | 希冀 CourseGrading（Java/OJ）AI 自动解题 → 自动提交 → 读判题；一键串行开刷、失败读样例多版本重试、自动跳题 | [![安装](https://img.shields.io/badge/安装-v2.4.3-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-solver.user.js) |
-| **飞跃·刷课 Grinder** | `feiyue-grinder` | 华为实习汁（小学期）全自动刷课：视频 + 课件 + 随堂测验 + 结课考试（题库优先 + AI 兜底，自带共享云题库 `feiyue-grinder-bank`） | [![安装](https://img.shields.io/badge/安装-v2.9.15-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-grinder.user.js) |
+| **飞跃·解题 Solver** | `feiyue-solver` | 希冀 CourseGrading（Java/OJ）AI 自动解题 → 自动提交 → 读判题；一键串行开刷、失败读样例多版本重试、自动跳题 | [![安装](https://img.shields.io/badge/安装-v2.6.1-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-solver.user.js) |
+| **飞跃·刷课 Grinder** | `feiyue-grinder` | 华为实习汁（小学期）全自动刷课：视频 + 课件 + 随堂测验 + 结课考试（题库优先 + AI 兜底，自带共享云题库 `feiyue-grinder-bank`） | [![安装](https://img.shields.io/badge/安装-v2.10.0-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-grinder.user.js) |
 | _飞跃·导入 import_ | — | 飞跃成绩单一键导入（**不在本仓**） | 由 [Aurash](https://github.com/winbeau/Aurash) 统一维护与部署 |
 
 > 点「安装」徽章，脚本猫会弹出安装 / 更新页。装过的会自动检查更新（Cloudflare 边缘缓存 4h，手动强制可在链接后加 `?v=<版本>` 回源验证）。徽章上的版本号即当前发布版。
@@ -48,7 +48,7 @@ docs/                # 开发文档 + 踩坑记录
 
 1. 直接在 `scripts/<名>/` 下编辑 `.user.js`，改动后**自增 `@version`**（改被测纯函数要同步 `feiyue-grinder/tests/sxz-core.mjs`）。
 2. 跑测试：`cd scripts/feiyue-grinder/tests && npm i && node --test *.mjs`（78 项）。
-3. 提交：`git commit -am "feat(grinder): … v2.9.16"`。
+3. 提交：`git commit -am "feat(grinder): … v2.10.1"`。
 4. 部署到 feiyue：`bash deploy/deploy.sh`（本机执行，经 win-wsl2 二跳推到 huawei2 的 `~/public-scripts/`）。
 
 > 部署必须从本机跑：huawei2（华为云）只能经 win-wsl2 内网二跳访问，GitHub 云端 CI 到不了它，故不用 CI 自动部署。

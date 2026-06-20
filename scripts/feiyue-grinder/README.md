@@ -9,7 +9,7 @@
 > 视频、课件、随堂测验、结课考试，一条龙跑完。<br/>
 > _Video · slides · quizzes · finals — answered by a shared question bank, AI as fallback._
 
-[![安装 / 更新](https://img.shields.io/badge/安装_·_更新-v2.9.15-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-grinder.user.js)
+[![安装 / 更新](https://img.shields.io/badge/安装_·_更新-v2.10.0-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-grinder.user.js)
 [![飞跃手册](https://img.shields.io/badge/飞跃手册-feiyue.selab.top-0F7B6C?style=flat-square&logo=cloudflare&logoColor=white)](https://feiyue.selab.top)
 [![仓库](https://img.shields.io/badge/源码-xju--feiyue--scripts-2383E2?style=flat-square&logo=github&logoColor=white)](https://github.com/XjuSelab/xju-feiyue-scripts)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
