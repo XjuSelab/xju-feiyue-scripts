@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         飞跃·导入 Importer
 // @namespace    https://feiyue.selab.top/feiyue-importer
-// @version      1.6.1
+// @version      1.6.2
 // @description  在新疆大学教务系统成绩页加「导入飞跃」悬浮按钮，一键导出成绩单并回传飞跃学分统计，自动出结果。
 // @author       feiyue
 // @match        https://jwxt-443.webvpn.xju.edu.cn:8040/*
@@ -19,6 +19,7 @@
  * 再 no-cors multipart POST 把 PDF 回传到飞跃后端中转端点；随后切回飞跃 /credits 自动解析。
  * 全程用你自己已登录的教务会话，不碰密码。
  *
+ * v1.6.2：下载成绩单带重试——教务 topdf 异步生成 PDF，download 太快会拿到 0 字节空文件；现轮询到合法 PDF 再回传，不再因「PDF 没生成好」误报「重新登录」。
  * v1.6.1：下载成绩单后校验 HTTP 状态 / 大小 / PDF 头(%PDF-) + 下载禁缓存(no-store)，避免拿到登录跳转页/空响应/缓存坏值时「假装回传成功」。
  * v1.6.0：迁入 xju-feiyue-scripts，统一命名 feiyue-importer（@name/@namespace/URL 变，逻辑不变）。
  * v1.5.1：悬浮按钮圆角再收小(6px)。
@@ -129,6 +130,32 @@
     return '2024'
   }
 
+  // 下载成绩单 PDF，带重试：教务 topdf 异步生成 PDF，download 太快会拿到 0 字节空文件，
+  // 轮询重试到拿到合法 PDF（size>=1KB 且头为 %PDF-）；会话有效但文件没生成好时不再误报「重新登录」。
+  function fetchPdfRetry(url, tries, delay) {
+    return fetch(url, { credentials: 'include', cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob() })
+      .then(function (blob) {
+        if (!blob || blob.size < 1024) throw new Error('empty')
+        return blob.slice(0, 5).arrayBuffer().then(function (head) {
+          var s = new Uint8Array(head)
+          if (s[0] === 0x25 && s[1] === 0x50 && s[2] === 0x44 && s[3] === 0x46 && s[4] === 0x2d) return blob
+          throw new Error('notpdf')
+        })
+      })
+      .catch(function (e) {
+        var retryable = e.message === 'empty' || e.message === 'notpdf' || /^HTTP/.test(e.message)
+        if (tries > 1 && retryable) {
+          return new Promise(function (res) { setTimeout(res, delay) }).then(function () {
+            return fetchPdfRetry(url, tries - 1, delay)
+          })
+        }
+        if (e.message === 'empty') throw new Error('成绩单 PDF 还没生成好（服务器多次返回空文件），请稍候几秒再点一次「导入飞跃」——无需重新登录')
+        if (e.message === 'notpdf') throw new Error('下载到的不是 PDF（导出异常），已自动重试仍失败，请稍候再试')
+        throw new Error('下载成绩单失败（' + e.message + '）')
+      })
+  }
+
   btn.addEventListener('click', function () {
     if (busy) return
     busy = true
@@ -157,29 +184,15 @@
         if (!sid || /guest/i.test(sid)) {
           throw new Error('未登录教务系统或会话已过期，请先在教务系统登录后再点')
         }
-        render('loading', IC_SPIN, '正在回传飞跃…')
-        return fetch(
-          PDF_API + '?method=download&title=' + TITLE + '.pdf&fileSavePath=' + path,
-          { credentials: 'include', cache: 'no-store' },
-        )
-      })
-      .then(function (r) {
-        if (!r.ok) throw new Error('下载成绩单失败（HTTP ' + r.status + '）——会话可能已过期，请重新登录教务系统后再试')
-        return r.blob()
+        render('loading', IC_SPIN, '正在生成并回传…')
+        // 教务 topdf 异步生成 PDF，download 太快会拿到 0 字节空文件 → 带重试拉到合法 PDF 再回传
+        return fetchPdfRetry(PDF_API + '?method=download&title=' + TITLE + '.pdf&fileSavePath=' + path, 8, 700)
       })
       .then(function (blob) {
-        // 校验下载到的确实是成绩单 PDF：拿到登录跳转页 / 空响应 / 缓存坏值时不再「假装回传成功」
-        if (!blob || blob.size < 1024) throw new Error('下载到的成绩单为空或过小（' + (blob ? blob.size : 0) + ' 字节），可能未登录或导出失败，请重新登录教务系统后再试')
-        return blob.slice(0, 5).arrayBuffer().then(function (head) {
-          var s = new Uint8Array(head)
-          if (!(s[0] === 0x25 && s[1] === 0x50 && s[2] === 0x44 && s[3] === 0x46 && s[4] === 0x2d)) {
-            throw new Error('下载到的不是 PDF（可能登录过期 / 导出失败），请重新登录教务系统后再试')
-          }
-          var fd = new FormData()
-          fd.append('sid', sid)
-          fd.append('file', blob, '查看成绩.pdf')
-          return fetch(STASH, { method: 'POST', mode: 'no-cors', body: fd })
-        })
+        var fd = new FormData()
+        fd.append('sid', sid)
+        fd.append('file', blob, '查看成绩.pdf')
+        return fetch(STASH, { method: 'POST', mode: 'no-cors', body: fd })
       })
       .then(function () {
         // 不再自动开新标签(会抢焦点)。切回飞跃「学分统计」标签页即自动刷出报告。
