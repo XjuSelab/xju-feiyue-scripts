@@ -8,7 +8,7 @@
 scripts/feiyue-solver/    飞跃·解题 Solver — CourseGrading(Java/OJ) AI 解题(原 cg-ai-solver/xiji)
 scripts/feiyue-grinder/   飞跃·刷课 Grinder — 华为小学期自动刷课(原 huawei-sxz-shuake)
   ├─ feiyue-grinder.user.js
-  ├─ feiyue-grinder-bank/            共享云题库后端(stdlib http.server + SQLite + Docker)
+  ├─ feiyue-grinder-bank/            共享云题库后端，grinder 测验 + solver 章习题 共用(stdlib http.server + SQLite + Docker)
   └─ tests/               jsdom + node:test
 scripts/feiyue-importer/  飞跃·导入 Importer — 新疆大学教务成绩单一键导入飞跃学分统计(原 Aurash frontend/public/import.user.js)
 deploy/                   本机一键部署到 feiyue 的脚本

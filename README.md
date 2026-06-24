@@ -38,7 +38,7 @@
 scripts/
   feiyue-solver/     # 飞跃·解题 Solver + tests + dev 辅助(gen.mjs / e2e.sh / preview-gen.mjs)
   feiyue-grinder/    # 飞跃·刷课 Grinder
-    └─ feiyue-grinder-bank/   # 共享云题库后端(stdlib http.server + SQLite + Docker)
+    └─ feiyue-grinder-bank/   # 共享云题库后端，grinder 测验 + solver 章习题 共用(stdlib http.server + SQLite + Docker)
     └─ tests/                 # jsdom + node:test
   feiyue-importer/   # 飞跃·导入 Importer(教务成绩单一键导入飞跃学分统计)
 deploy/              # 本机一键部署到 feiyue 的脚本(见下)

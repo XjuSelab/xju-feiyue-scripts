@@ -38,6 +38,7 @@ stdlib `http.server` + SQLite 的极简共享题库服务，Docker 部署在 hua
 - `GET /search?q=<题干>&type=<题型>` → `{texts:[正确选项内容…], qtype, stem, votes}`
 - `POST /add {stem,qtype,texts[]}`、`GET /stats`、`GET /health`
 - 存「正确选项内容」而非字母（防选项乱序），归一化双向子串模糊匹配。
+- **现也被 [feiyue-solver](../feiyue-solver/) 的「章习题」复用**（同端点、同库）：solver 客观题题库优先命中、满分后回写，两脚本共建一个题库。
 - 重建容器见 `deploy/deploy-bank.sh`，**数据卷勿删**。
 
 ## 测试 · Tests
