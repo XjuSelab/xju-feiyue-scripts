@@ -7,7 +7,7 @@ const noop = () => {};
 const ctx = { document: { readyState: 'loading', addEventListener: noop, querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, body: { innerHTML: '' }, title: '' }, location: { origin: 'http://x', pathname: '/x', search: '', href: 'http://x/' }, navigator: { userAgent: 'node' }, GM_addStyle: noop, GM_getValue: (k, d) => d, GM_setValue: noop, GM_deleteValue: noop, GM_registerMenuCommand: noop, GM_xmlhttpRequest: noop, GM_setClipboard: noop, GM_info: { script: { version: 'x' } }, TextDecoder, setTimeout, clearTimeout, setInterval, clearInterval, console, Date, JSON, Math, RegExp, String, Object, Array, Number, Set };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.window.__CGAI_EXPOSE__ = true;
 vm.createContext(ctx); vm.runInContext(src, ctx);
-const { qNorm, lettersFromTexts, parseQuizAnswers, answerContent } = ctx.window.__CGAI_API__;
+const { qNorm, lettersFromTexts, parseQuizAnswers, answerContent, gapPairsFrom } = ctx.window.__CGAI_API__;
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { if (c) { pass++; console.log('  ✓', n); } else { fail++; console.log('  ✗', n, x != null ? '— ' + JSON.stringify(x) : ''); } };
 
@@ -34,6 +34,13 @@ ok('choice 多选→多内容', answerContent({ type: 'choice', options: opts },
 ok('judge 对→正确', JSON.stringify(answerContent({ type: 'judge' }, '对')) === JSON.stringify(['正确']));
 ok('judge 错→错误', JSON.stringify(answerContent({ type: 'judge' }, '错误')) === JSON.stringify(['错误']));
 ok('fill→原文', JSON.stringify(answerContent({ type: 'fill' }, 'a==b')) === JSON.stringify(['a==b']));
+
+// gapPairsFrom：填空题流式「半截 JSON」抽已闭合的空答案对（边生成边填空用）
+ok('完整对全取', JSON.stringify(gapPairsFrom('{"1":"abc","2":"def"}')) === JSON.stringify({ '1': 'abc', '2': 'def' }));
+ok('半截只取已闭合', JSON.stringify(gapPairsFrom('{"1":"abc","2":"de')) === JSON.stringify({ '1': 'abc' }));
+ok('转义引号还原', gapPairsFrom('{"1":"a\\"b"}')['1'] === 'a"b');
+ok('转义换行还原', gapPairsFrom('{"3":"x\\ny"}')['3'] === 'x\ny');
+ok('非数字键忽略', JSON.stringify(gapPairsFrom('{"x":"y"}')) === '{}');
 
 console.log(`\n=== ${pass} 通过 / ${fail} 失败 ===`);
 process.exit(fail ? 1 : 0);

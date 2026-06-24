@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.7.2
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。
+// @version      2.7.3
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。v2.7.3：填空题「随流式逐空实时填入」——每个空答案在流里一闭合就灌进页面对应 textarea，前端可见代码一空一空填出来(gapPairsFrom 抽已闭合 JSON 对)；配置页 BaseURL 占位/提示改为 DeepSeek 默认(https://api.deepseek.com)。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -372,6 +372,21 @@
         template = template.replace(/\u00a0/g, ' ').replace(/\u3000/g, '  '); // normalize nbsp / fullwidth
         return { template, gaps };
     }
+    // \u586b\u7a7a\u9898\uff1a\u968f\u6d41\u5f0f\u751f\u6210\u628a\u6bcf\u4e2a\u300c\u5df2\u95ed\u5408\u300d\u7684\u7a7a\u7b54\u6848\u5b9e\u65f6\u704c\u8fdb\u9875\u9762\u5bf9\u5e94 <textarea name=answerN>\uff0c\u524d\u7aef\u53ef\u89c1\u9010\u7a7a\u586b\u5165\uff08\u89c6\u89c9\u7528\uff1b\u6700\u7ec8\u63d0\u4ea4\u4ecd\u8d70 submitGap\uff09
+    function makeGapLiveFiller() {
+        const form = document.getElementById('uploadFORM') || document.querySelector('form[name="uploadFORM"]');
+        if (!form) return null;
+        const fields = {};
+        form.querySelectorAll('textarea[name^="answer"]').forEach(t => { const k = ((t.getAttribute('name') || '').match(/answer(\d+)/) || [])[1]; if (k) fields[k] = t; });
+        const last = {};
+        return content => {
+            const pairs = gapPairsFrom(content);
+            Object.keys(pairs).forEach(k => {
+                const ta = fields[k]; if (!ta || last[k] === pairs[k]) return;
+                ta.value = pairs[k]; ta.dispatchEvent(new Event('input', { bubbles: true })); last[k] = pairs[k];
+            });
+        };
+    }
     // 统一提取：根据题型返回 problem 对象
     function extractFor(kind) {
         const title = titleOf();
@@ -568,7 +583,7 @@
                 if (len !== lastLen) { lastLen = len; lastDataAt = Date.now(); if (len > 0) { hadData = true; ticks++; } }
                 lastContent = r.content;
                 phase = r.content ? 'gen' : (r.reasoning ? 'think' : 'wait'); // gen=已出正文 / think=只有思考 / wait=尚无任何 token
-                if (hooks && hooks.onProgress) hooks.onProgress({ phase, reasoningLen: r.reasoning.length, contentLen: r.content.length });
+                if (hooks && hooks.onProgress) hooks.onProgress({ phase, reasoningLen: r.reasoning.length, contentLen: r.content.length, content: r.content });
             };
             // 读 ReadableStream（脚本猫/TM 在 responseType:'stream' 下给的真增量流），增量解码喂给 onText。只读一次，settle 后 cancel。
             const pump = rs => {
@@ -653,6 +668,12 @@
         const s = t.indexOf('{'), e = t.lastIndexOf('}'); if (s >= 0 && e >= 0) t = t.slice(s, e + 1);
         let o; try { o = JSON.parse(t); } catch (_) { o = null; }
         const out = {}; if (o) Object.keys(o).forEach(k => { const n = (k.match(/\d+/) || [])[0]; if (n != null) out[n] = String(o[k]); });
+        return out;
+    }
+    // 流式：从「半截 JSON」里抽出已闭合的 "k":"value" 对（值已结束=可安全填入），供边生成边填空用（纯函数，可单测）
+    function gapPairsFrom(partial) {
+        const out = {}; const re = /"(\d+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g; let m;
+        while ((m = re.exec(String(partial || '')))) { let v; try { v = JSON.parse('"' + m[2] + '"'); } catch (_) { v = m[2]; } out[m[1]] = v; }
         return out;
     }
 
@@ -872,6 +893,7 @@
         const host = getBaseURL().replace(/^https?:\/\//, '');
         const problemBudgetMs = s.problemBudgetMs || PROBLEM_BUDGET_MS, callTimeoutMs = s.callTimeoutMs || CALL_TIMEOUT_MS;
         let messages = buildMessages(problem); // [system, user(题目)]，后续把每版回复与错误样例追加进同一对话（每连错2次压缩一次）
+        const gapLive = (kind === 'gap') ? makeGapLiveFiller() : null; // 填空题：流式逐空填入页面 textarea（前端可见）
         const t0 = Date.now();
         let deadline = t0 + problemBudgetMs; // 升级强模型那版会重置为全新预算
         let best = null, baselineTime = '', timedOut = false, failStreak = 0;
@@ -887,7 +909,7 @@
             let res;
             try {
                 LOG.push('info', `调用 ${opt.model}${opt.thinking ? '·思考' : ''}（第 ${i + 1}/${plan.length} 版·${MODE_CN[opt.mode] || opt.mode}·上限 ${fmtN(versionTokens)}tok）`);
-                const raw = await callLLM(messages, { ...opt, maxTokens: versionTokens }, apiKey, callTimeoutMs, streamHooks()); // 固定单次超时(6min)，不被总时钟挤压
+                const raw = await callLLM(messages, { ...opt, maxTokens: versionTokens }, apiKey, callTimeoutMs, streamHooks(gapLive)); // 填空题随流式逐空填入页面
                 clearTransientBanners();              // 拿到响应=连通且鉴权 OK，清掉连接/超时/卡住类提醒
                 LOG.push('gen', `模型已出答案（${raw.length} 字）`);
                 messages.push({ role: 'assistant', content: raw }); // 模型本版回复留在上下文里
@@ -973,10 +995,10 @@
         render(); _tick = setInterval(render, 1000);
     }
     // 流式 hooks：把「思考中 N字 / 生成中 M字 / ⚠卡住」实时写进状态行；卡住时记一次日志+引导 banner（每段卡顿只记一次）
-    function streamHooks() {
+    function streamHooks(onLive) {
         let stalled = false;
         return {
-            onProgress: ({ phase, reasoningLen, contentLen }) => { stalled = false; _streamInfo = phase === 'gen' ? `生成中 ${fmtN(contentLen)}字` : (phase === 'think' ? `思考中 ${fmtN(reasoningLen)}字` : '等待响应…'); },
+            onProgress: ({ phase, reasoningLen, contentLen, content }) => { stalled = false; _streamInfo = phase === 'gen' ? `生成中 ${fmtN(contentLen)}字` : (phase === 'think' ? `思考中 ${fmtN(reasoningLen)}字` : '等待响应…'); if (onLive && phase === 'gen' && content) { try { onLive(content); } catch (_) {} } },
             onStall: (secs, hadData, phase) => {
                 const st = streamStallState(phase, secs);
                 _streamInfo = st.info;
@@ -1442,7 +1464,7 @@
             <div id="cgai-config">
                 <div class="cfg-head"><div><b>配置</b> <span class="sub">OpenAI 兼容</span></div><span class="cgai-ic" id="cfg-x" title="关闭">${ICON.minus}</span></div>
                 <div class="cfg-body">
-                    <div class="cgai-field"><label>API Base URL</label><input id="cfg-base" type="text" spellcheck="false" placeholder="https://aiapis.help/v1"><span class="hint">调用 &lt;BaseURL&gt;/chat/completions 与 /models；可换任意 OpenAI 兼容服务（GPT 代理一般要带 /v1，如 https://aiapis.help/v1；DeepSeek 时才发送 thinking 参数）。</span></div>
+                    <div class="cgai-field"><label>API Base URL</label><input id="cfg-base" type="text" spellcheck="false" placeholder="https://api.deepseek.com"><span class="hint">调用 &lt;BaseURL&gt;/chat/completions 与 /models；默认 DeepSeek（https://api.deepseek.com，主模型 deepseek-chat 快·强模型 deepseek-reasoner，稳定快速）；也可换任意 OpenAI 兼容服务（GPT 代理一般要带 /v1）；仅 DeepSeek 端点发送 thinking 参数。</span></div>
                     <div class="cgai-field"><label>API Key</label><input id="cfg-key" type="password" spellcheck="false" placeholder="sk-...">
                         <span class="hint">没有 Key？去获取：<a href="https://aiapis.help/console" target="_blank" rel="noopener">GPT 系 (aiapis.help/console)</a> · <a href="https://platform.deepseek.com" target="_blank" rel="noopener">DeepSeek 系 (platform.deepseek.com)</a></span></div>
                     <div class="cgai-field"><label>主模型 <button class="cgai-mini" id="cfg-fetch" type="button">${ICON.refresh}刷新模型列表</button></label>
@@ -1530,7 +1552,7 @@
     GM_registerMenuCommand('停止开刷 / 清除进度', () => { clearGrind(); if (grindEl) renderGrind(); if (statusEl) setStatus('已清除开刷进度。', ''); if (btnGrind) refreshButtons(); });
 
     if (typeof window !== 'undefined' && window.__CGAI_EXPOSE__) {
-        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState, callLLM, getBaseURL, autoTokens, decideRetry, isCapErr, isQuizPage, extractQuiz, quizMessages, parseQuizAnswers, quizScoreFrom, qNorm, lettersFromTexts, answerContent, toAscii };
+        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, gapPairsFrom, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState, callLLM, getBaseURL, autoTokens, decideRetry, isCapErr, isQuizPage, extractQuiz, quizMessages, parseQuizAnswers, quizScoreFrom, qNorm, lettersFromTexts, answerContent, toAscii };
     }
 
     function boot() {

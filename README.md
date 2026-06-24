@@ -26,7 +26,7 @@
 
 | 脚本 | 技术 ID | 用途 | 安装 / 更新 |
 | :-- | :-- | :-- | :--: |
-| **飞跃·解题 Solver** | `feiyue-solver` | 希冀（Java/OJ）AI 自动解题、一键开刷、章习题题库 | [![安装](https://img.shields.io/badge/安装-v2.7.2-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-solver.user.js) |
+| **飞跃·解题 Solver** | `feiyue-solver` | 希冀（Java/OJ）AI 自动解题、一键开刷、章习题题库 | [![安装](https://img.shields.io/badge/安装-v2.7.3-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-solver.user.js) |
 | **飞跃·刷课 Grinder** | `feiyue-grinder` | 华为小学期全自动刷课（视频 / 课件 / 测验 / 考试） | [![安装](https://img.shields.io/badge/安装-v2.10.0-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-grinder.user.js) |
 | **飞跃·导入 Importer** | `feiyue-importer` | 教务成绩单一键导入飞跃学分统计 | [![安装](https://img.shields.io/badge/安装-v1.6.2-00485B?style=flat-square)](https://feiyue.selab.top/feiyue-importer.user.js) |
 
