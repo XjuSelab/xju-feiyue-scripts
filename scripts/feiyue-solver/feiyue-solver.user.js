@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.7.4
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。v2.7.3：填空题「随流式逐空实时填入」——每个空答案在流里一闭合就灌进页面对应 textarea，前端可见代码一空一空填出来(gapPairsFrom 抽已闭合 JSON 对)；配置页 BaseURL 占位/提示改为 DeepSeek 默认(https://api.deepseek.com)。v2.7.4：_ce 在线编辑器题改为「流式逐字写入编辑器 + 点原生提交按钮」——清空编辑器→聚焦→流式把代码逐字写进 CodeMirror(replaceRange 末尾追加)→点 #cgSubmitBtn 原生提交触发判题动画→pollVerdict 等结果；点击失败回退 GM 表单兜底，判题信号仍走 HTTP 轮询。前端肉眼可见解题全过程。
+// @version      2.8.0
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。v2.7.3：填空题「随流式逐空实时填入」——每个空答案在流里一闭合就灌进页面对应 textarea，前端可见代码一空一空填出来(gapPairsFrom 抽已闭合 JSON 对)；配置页 BaseURL 占位/提示改为 DeepSeek 默认(https://api.deepseek.com)。v2.7.4：_ce 在线编辑器题改为「流式逐字写入编辑器 + 点原生提交按钮」——清空编辑器→聚焦→流式把代码逐字写进 CodeMirror(replaceRange 末尾追加)→点 #cgSubmitBtn 原生提交触发判题动画→pollVerdict 等结果；点击失败回退 GM 表单兜底，判题信号仍走 HTTP 轮询。前端肉眼可见解题全过程。v2.8.0：章习题 v2——题库串行搜+命中即填→未命中 AI(每章一个对话)→回读真实满分(解析「作业满分:X」，修复 5题×20=100 的 80分误判满分→污染题库)→未满分按错题数反馈多轮重试(≤3轮、保留最佳防回退)→仅满分入库；提交后自动刷新页面总分(免手刷)；「一键开刷全部」纳入章节章习题(index.jsp answerForm→quiz 队列→runQuiz)。题库后端加 token 保护 /del 删题 + add_log 增删审计 + /log 查看。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -45,7 +45,7 @@
     const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
     const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
     const OJ = location.origin;
-    const PAGE_OF = { file: 'programList.jsp', ce: 'programList_ce.jsp', iface: 'programWithInterfaceList.jsp', gap: 'programFillGapList.jsp' };
+    const PAGE_OF = { file: 'programList.jsp', ce: 'programList_ce.jsp', iface: 'programWithInterfaceList.jsp', gap: 'programFillGapList.jsp', quiz: 'index.jsp' };
 
     const getKey = () => (GM_getValue(STORE.KEY, '') || '').trim();
     const getBaseURL = () => (GM_getValue(STORE.BASE_URL, DEFAULTS.baseURL) || DEFAULTS.baseURL).trim().replace(/\/+$/, '');
@@ -120,9 +120,10 @@
         if (/programWithInterfaceList\.jsp/i.test(h)) return 'iface';
         if (/programList_ce\.jsp/i.test(h)) return 'ce';   // 在线代码编辑器题（programList.jsp 对部分题会 302 跳到 _ce）
         if (/programList\.jsp/i.test(h)) return 'file';
+        if (isQuizPage()) return 'quiz';   // 章习题(index.jsp 内联客观题)——供开刷队列识别
         return null;
     }
-    const isProblemPage = () => !!pageType();
+    const isProblemPage = () => { const k = pageType(); return !!k && k !== 'quiz'; }; // 章习题不算编程题(走「做章习题」，不显示「解本题」)
     const getCur = () => ({
         assignID: (location.search.match(/assignID=(\d+)/) || [])[1] || '',
         proNum: (location.search.match(/proNum=(\d+)/) || [])[1] || '',
@@ -483,6 +484,8 @@
             }
             if (!items.length) LOG.push('warn', `作业 ${assignID} 抽题后仍未读到题目，可能抽取失败或服务器较慢；请勿重复「开刷」以免重抽换题`);
         }
+        // 章习题：该作业 index.jsp 含内联客观题(answerForm) → 加一个 quiz 队列项（整章一次 runQuiz 多轮）
+        if (/name=["']?answerForm/i.test(html) || /stuAnswerHandler\.jsp/i.test(html)) items.push({ assignID: String(assignID), proNum: '', page: 'index.jsp' });
         return items;
     }
     async function buildQueue() {
@@ -1067,7 +1070,7 @@
         if ((r.passed || 0) > 0) return ICON.warn + `部分通过 ${r.passed}/${r.total}` + (r.score ? ` · 得分 ${r.score}` : '');
         return ICON.err + (r.error ? '失败：' + r.error : '未通过');
     }
-    const KIND_CN = { file: '编程题', ce: '编程题(在线编辑)', iface: '接口题', gap: '填空题' };
+    const KIND_CN = { file: '编程题', ce: '编程题(在线编辑)', iface: '接口题', gap: '填空题', quiz: '章习题' };
     const MODE_CN = { normal: '直接解', fix: '纠错', sample: '面向样例', escalate: '升级强模型' };
 
     async function runSolveCurrent() {
@@ -1163,15 +1166,20 @@
             if (qi < 0) { const nxt = g.queue.find(it => !g.done[itemKey(it)]); if (nxt) navTo(nxt); else finishGrind(g); return; }
             const item = g.queue[qi], k = itemKey(item), klabel = `${item.assignID}${TAG(item.page)}:${item.proNum}`, s = g.settings || settings();
             if (!g.done[k]) {
-                const problem = extractFor(kind), ids = extractIds();
-                titleEl.innerHTML = ICON.file + `<span>[${KIND_CN[kind]}] ` + esc(problem.title) + '</span>';
-                renderGrind();
                 let r;
-                if (s.skipPassed) { const pv = parseVerdict(await fetchVerdict(ids.assignID, ids.problemID)); const sc = scoreOf(pv && pv.content || ''); if (sc.total > 0 && sc.passed === sc.total) r = { skipped: true, ...sc, title: problem.title }; }
-                if (!r) {
-                    const res = await solveProblem(kind, problem, ids, s, (i, n, opt) => tickStatus(`开刷 ${klabel}·第 ${i}/${n} 版${opt.mode === 'escalate' ? '·升级' : opt.mode === 'sample' ? '·面向样例' : (i > 1 ? '·纠错' : '')}（${opt.model}${opt.thinking ? '·思考' : ''}）…`));
-                    r = { ok: res.ok, passed: res.passed, total: res.total, score: res.score, error: res.error, timedOut: res.timedOut, attempt: res.attempt, title: problem.title };
-                    if (res.verdict) showVerdictCard(res.verdict.content);
+                if (kind === 'quiz') {       // 章习题：整章一次 runQuiz(多轮直到满分)
+                    titleEl.innerHTML = ICON.run + '<span>[章习题] ' + esc(titleOf() || ('作业 ' + item.assignID)) + '</span>'; renderGrind();
+                    if (s.skipPassed) { try { const h = await gmGetText(location.href); const sc = quizScoreFrom(h), fl = quizFullFrom(h) || 0; if (sc != null && fl > 0 && sc >= fl) r = { skipped: true, passed: 0, total: 0, title: '章习题' }; } catch (_) {} }
+                    if (!r) { const res = await runQuiz(true); r = res ? { ok: res.ok, passed: res.passed, total: res.total, score: res.score, title: res.title } : { ok: false, error: '章习题失败', title: '章习题' }; }
+                } else {
+                    const problem = extractFor(kind), ids = extractIds();
+                    titleEl.innerHTML = ICON.file + `<span>[${KIND_CN[kind]}] ` + esc(problem.title) + '</span>'; renderGrind();
+                    if (s.skipPassed) { const pv = parseVerdict(await fetchVerdict(ids.assignID, ids.problemID)); const sc = scoreOf(pv && pv.content || ''); if (sc.total > 0 && sc.passed === sc.total) r = { skipped: true, ...sc, title: problem.title }; }
+                    if (!r) {
+                        const res = await solveProblem(kind, problem, ids, s, (i, n, opt) => tickStatus(`开刷 ${klabel}·第 ${i}/${n} 版${opt.mode === 'escalate' ? '·升级' : opt.mode === 'sample' ? '·面向样例' : (i > 1 ? '·纠错' : '')}（${opt.model}${opt.thinking ? '·思考' : ''}）…`));
+                        r = { ok: res.ok, passed: res.passed, total: res.total, score: res.score, error: res.error, timedOut: res.timedOut, attempt: res.attempt, title: problem.title };
+                        if (res.verdict) showVerdictCard(res.verdict.content);
+                    }
                 }
                 g.done[k] = r; setGrind(g); renderGrind();
             }
@@ -1220,6 +1228,14 @@
         return /\/assignment\/index\.jsp/i.test(location.pathname) && !!document.querySelector('form[name^="answerForm"]');
     }
     function quizScoreFrom(html) { const m = (html || '').match(/总分[:：]\s*([\d.]+)/); return m ? parseFloat(m[1]) : null; }
+    function quizFullFrom(html) { const m = (html || '').match(/作业满分[：:]\s*([\d.]+)/); return m ? parseFloat(m[1]) : null; } // 真实满分(5题×20=100，修复 80分=4/5 误判)
+    function refreshQuizScore(score) { // 提交后把页面「总分」H3 刷新为最新分并高亮，免手动刷新
+        if (score == null) return;
+        const el = [...document.querySelectorAll('h3,h2,h4,b,strong,span,div,font')].find(e => !e.children.length && /^\s*总分[:：]\s*[\d.]+/.test((e.textContent || '').trim()));
+        if (!el) return;
+        el.textContent = '总分: ' + Number(score).toFixed(2);
+        try { const o = el.style.background; el.style.transition = 'background .4s'; el.style.background = '#fff39a'; setTimeout(() => { try { el.style.background = o || ''; } catch (_) {} }, 1600); } catch (_) {}
+    }
     function extractQuiz() {
         const fw = c => /[Ａ-Ｄ]/.test(c) ? String.fromCharCode(c.charCodeAt(0) - 0xFEE0) : c; // 全角字母→半角
         return [...document.querySelectorAll('form[name^="answerForm"]')].map(f => {
@@ -1275,22 +1291,27 @@
         }
         return false;
     }
-    async function runQuiz() {
-        if (!ensureConfig()) return;
-        if (!isQuizPage()) { setStatus('本页不是章习题（无内联客观题）。', ''); return; }
-        busy = true; refreshButtons();
+    async function runQuiz(inGrind) {
+        if (!ensureConfig()) return null;
+        if (!isQuizPage()) { if (!inGrind) setStatus('本页不是章习题（无内联客观题）。', ''); return null; }
+        if (!inGrind) { busy = true; refreshButtons(); }
         try {
             // 防呆：form target 指向 frame_problemhandler，若该 iframe 不存在，submit 会弹新窗口——先补一个隐藏 iframe
             if (!document.querySelector('iframe[name=frame_problemhandler]')) {
                 const ifr = document.createElement('iframe'); ifr.name = 'frame_problemhandler'; ifr.style.display = 'none'; document.body.appendChild(ifr);
             }
             const apiKey = getKey(), s = settings(), qs = extractQuiz();
-            const before = quizScoreFrom(document.body.innerText);
-            LOG.push('info', `章习题：${qs.length} 题（总分 ${before}）— 题库优先 → AI 兜底`);
-            setStatus(`章习题 ${qs.length} 题：查题库…`, 'busy', true);
-            // ① 题库优先：按题干内容搜，命中则把正确内容映射成当前题答案
+            const readScore = async () => { try { return quizScoreFrom(await gmGetText(location.href)); } catch (_) { return null; } };
+            let html0 = ''; try { html0 = await gmGetText(location.href); } catch (_) {}
+            const full = quizFullFrom(html0) || qs.length * 10;            // 真实满分(修复 5×20 章节 80分误判)
+            const perQ = full / Math.max(1, qs.length);
+            let after = quizScoreFrom(html0); if (after == null) after = quizScoreFrom(document.body.innerText);
+            LOG.push('info', `章习题：${qs.length} 题，满分 ${full}（当前 ${after}）— 题库优先(串行) → AI(多轮)`);
+            // ① 串行：逐题搜题库，命中立即填+提交（搜完一题就选上）
             const ans = {}, misses = [];
-            for (const q of qs) {
+            for (let i = 0; i < qs.length; i++) {
+                const q = qs[i];
+                setStatus(`查题库并作答 ${i + 1}/${qs.length}…`, 'busy', true);
                 let texts = null; try { texts = await bankSearch(q.stem, QTYPE_CN[q.type]); } catch (_) {}
                 let a = null;
                 if (texts) {
@@ -1298,42 +1319,53 @@
                     else if (q.type === 'judge') a = /正确|对|true/i.test(texts.join('')) ? '正确' : '错误';
                     else a = texts[0];
                 }
-                if (a != null) { ans[q.pid] = a; q.src = '题库'; } else misses.push(q);
+                if (a != null) { ans[q.pid] = a; q.src = '题库'; if (fillQuizAnswer(q, a)) await sleep(1200); }
+                else misses.push(q);
             }
             const bankHit = qs.length - misses.length;
-            // ② AI 兜底（仅未命中的，批量一次）
-            if (misses.length) {
-                setStatus(`题库命中 ${bankHit}/${qs.length}，AI 解 ${misses.length} 题…`, 'busy', true);
+            await sleep(1200); after = await readScore(); refreshQuizScore(after);
+            // ② AI 多轮（每章一个对话）：先解未命中；未满分且有 AI 题 → 喂错题数反馈重做，≤3 轮，保留最佳
+            let messages = null, best = { score: after == null ? -1 : after, ans: { ...ans } };
+            for (let round = 1; round <= 3 && best.score < full; round++) {
+                let target;
+                if (round === 1) {
+                    if (!misses.length) break;
+                    messages = quizMessages(misses); target = misses;
+                    setStatus(`题库命中 ${bankHit}/${qs.length}，AI 解 ${misses.length} 题（第1轮）…`, 'busy', true);
+                } else {
+                    const aiQs = qs.filter(q => q.src === 'AI'); if (!aiQs.length) break;
+                    const wrong = Math.max(1, Math.round((full - best.score) / perQ));
+                    messages.push({ role: 'user', content: `上一轮你作答的 ${aiQs.length} 道题里有 ${wrong} 道判错了（当前总分 ${best.score}/${full}）。请复核改正可能错的题，重新输出这些题全部答案的 JSON。` });
+                    target = aiQs;
+                    setStatus(`未满分 ${best.score}/${full}，AI 第 ${round} 轮重做 ${aiQs.length} 题…`, 'busy', true);
+                }
                 let raw;
-                // 章习题是简单客观题：用常规模型、不思考（避免被推理模型拖到 80s+）；不再默认走强模型/思考
-                try { raw = await callLLM(quizMessages(misses), { model: s.model, thinking: false, temperature: 0, maxTokens: 4096 }, apiKey, s.callTimeoutMs || CALL_TIMEOUT_MS, streamHooks()); }
-                catch (e) { setStatus('AI 作答失败：' + (e.message || e), 'err'); LOG.push('err', '章习题 AI 失败：' + (e.message || e), e && e.extra); applyBanner(e); return; }
-                clearTransientBanners();
-                const map = parseQuizAnswers(raw);
-                misses.forEach(q => { if (map[q.pid] != null) { ans[q.pid] = map[q.pid]; q.src = 'AI'; } });
+                try { raw = await callLLM(messages, { model: s.model, thinking: false, temperature: 0, maxTokens: 4096 }, apiKey, s.callTimeoutMs || CALL_TIMEOUT_MS, streamHooks()); }
+                catch (e) { LOG.push('err', `章习题 AI 第${round}轮失败：` + (e.message || e), e && e.extra); applyBanner(e); break; }
+                clearTransientBanners(); messages.push({ role: 'assistant', content: raw });
+                const map = parseQuizAnswers(raw); let n = 0;
+                for (const q of target) { if (map[q.pid] != null) { ans[q.pid] = map[q.pid]; q.src = 'AI'; if (fillQuizAnswer(q, ans[q.pid])) { n++; await sleep(1200); } } }
+                await sleep(1200); after = await readScore(); refreshQuizScore(after);
+                LOG.push('info', `AI 第 ${round} 轮提交 ${n} 题 → 总分 ${after}/${full}`);
+                if (after != null && after > best.score) best = { score: after, ans: { ...ans } };
             }
-            // ③ 逐题提交（≥1.2s，避免共用 iframe 抢提交丢 POST）
-            let filled = 0;
-            for (const q of qs) {
-                if (ans[q.pid] == null) { LOG.push('warn', `题 ${q.pid} 无答案（题库+AI 均未给）`); continue; }
-                if (fillQuizAnswer(q, ans[q.pid])) { filled++; setStatus(`提交 ${filled}/${qs.length}（${q.src || '?'}）…`, 'busy', true); }
-                await sleep(1200);
+            // ③ 应用最佳：若当前不是最佳（某轮越改越差），回填最佳答案（保留最佳分）
+            if (after == null || after < best.score) {
+                let rev = 0; for (const q of qs) { if (best.ans[q.pid] != null && ans[q.pid] !== best.ans[q.pid]) { ans[q.pid] = best.ans[q.pid]; if (fillQuizAnswer(q, ans[q.pid])) { rev++; await sleep(1200); } } }
+                if (rev) { after = await readScore(); refreshQuizScore(after); LOG.push('info', `回填最佳答案 ${rev} 题 → ${after}/${full}`); }
             }
-            // ④ 回读总分
-            await sleep(1500);
-            let after = before;
-            try { const sc = quizScoreFrom(await gmGetText(location.href)); if (sc != null) after = sc; } catch (_) {}
-            const full = qs.length * 10;
-            // ⑤ 仅满分时把正确答案入云题库（镜像 grinder「只存满分确认」，存内容防乱序）
+            refreshQuizScore(after);
+            // ④ 仅满分入库（按真实满分判定，修复污染根因；存内容防乱序）
             if (after != null && after >= full) {
                 let added = 0; qs.forEach(q => { const cc = answerContent(q, ans[q.pid]); if (cc.length) { bankAdd(q.stem, QTYPE_CN[q.type], cc); added++; } });
-                LOG.push('ok', `章习题满分 ${after}/${full}（题库命中 ${bankHit}/${qs.length}）→ ${added} 题正确答案入云题库`);
-                setStatus(ICON.ok + `章习题满分 ${after}/${full}！题库命中 ${bankHit}、提交 ${filled}，正确答案已入题库。`, 'ok');
+                LOG.push('ok', `章习题满分 ${after}/${full}（题库命中 ${bankHit}）→ ${added} 题正确答案入云题库`);
+                setStatus(ICON.ok + `章习题满分 ${after}/${full}！命中 ${bankHit}，正确答案已入题库。`, 'ok');
             } else {
-                LOG.push('warn', `章习题 ${after}/${full}（题库命中 ${bankHit}）— 未满分，不入库`);
-                setStatus(`章习题 ${after}/${full}（提交 ${filled}，题库命中 ${bankHit}）。未满分未入库；可重试 / 换模型。`, 'busy');
+                LOG.push('warn', `章习题 ${after}/${full}（命中 ${bankHit}）— 未满分，不入库`);
+                setStatus(`章习题 ${after}/${full}（命中 ${bankHit}）未满分；可再点「做章习题」重试或换模型。`, 'busy');
             }
-        } finally { busy = false; refreshButtons(); }
+            return { ok: after != null && after >= full, passed: (after != null && perQ) ? Math.round(after / perQ) : 0, total: qs.length, score: after, title: '章习题' };
+        } finally { if (!inGrind) { busy = false; refreshButtons(); } }
     }
 
     function refreshButtons() {
@@ -1586,14 +1618,14 @@
     GM_registerMenuCommand('停止开刷 / 清除进度', () => { clearGrind(); if (grindEl) renderGrind(); if (statusEl) setStatus('已清除开刷进度。', ''); if (btnGrind) refreshButtons(); });
 
     if (typeof window !== 'undefined' && window.__CGAI_EXPOSE__) {
-        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, gapPairsFrom, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState, callLLM, getBaseURL, autoTokens, decideRetry, isCapErr, isQuizPage, extractQuiz, quizMessages, parseQuizAnswers, quizScoreFrom, qNorm, lettersFromTexts, answerContent, toAscii };
+        window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, gapPairsFrom, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState, callLLM, getBaseURL, autoTokens, decideRetry, isCapErr, isQuizPage, extractQuiz, quizMessages, parseQuizAnswers, quizScoreFrom, quizFullFrom, qNorm, lettersFromTexts, answerContent, toAscii };
     }
 
     function boot() {
         LOG.load();
         buildPanel();
         const g = getGrind();
-        if (g && g.active && isProblemPage()) setTimeout(grindStep, 1300);
+        if (g && g.active && pageType()) setTimeout(grindStep, 1300); // pageType() 含 'quiz'(章习题)与各编程题型
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

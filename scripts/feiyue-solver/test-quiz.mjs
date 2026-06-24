@@ -7,7 +7,7 @@ const noop = () => {};
 const ctx = { document: { readyState: 'loading', addEventListener: noop, querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, body: { innerHTML: '' }, title: '' }, location: { origin: 'http://x', pathname: '/x', search: '', href: 'http://x/' }, navigator: { userAgent: 'node' }, GM_addStyle: noop, GM_getValue: (k, d) => d, GM_setValue: noop, GM_deleteValue: noop, GM_registerMenuCommand: noop, GM_xmlhttpRequest: noop, GM_setClipboard: noop, GM_info: { script: { version: 'x' } }, TextDecoder, setTimeout, clearTimeout, setInterval, clearInterval, console, Date, JSON, Math, RegExp, String, Object, Array, Number, Set };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.window.__CGAI_EXPOSE__ = true;
 vm.createContext(ctx); vm.runInContext(src, ctx);
-const { qNorm, lettersFromTexts, parseQuizAnswers, answerContent, gapPairsFrom } = ctx.window.__CGAI_API__;
+const { qNorm, lettersFromTexts, parseQuizAnswers, answerContent, gapPairsFrom, quizFullFrom } = ctx.window.__CGAI_API__;
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { if (c) { pass++; console.log('  ✓', n); } else { fail++; console.log('  ✗', n, x != null ? '— ' + JSON.stringify(x) : ''); } };
 
@@ -41,6 +41,12 @@ ok('半截只取已闭合', JSON.stringify(gapPairsFrom('{"1":"abc","2":"de')) =
 ok('转义引号还原', gapPairsFrom('{"1":"a\\"b"}')['1'] === 'a"b');
 ok('转义换行还原', gapPairsFrom('{"3":"x\\ny"}')['3'] === 'x\ny');
 ok('非数字键忽略', JSON.stringify(gapPairsFrom('{"x":"y"}')) === '{}');
+
+// quizFullFrom：解析页面「作业满分：X」真实满分（修复 5题×20=100 的 80分误判）
+ok('作业满分 100(10题)', quizFullFrom('作业满分：100.00，共 10道 题') === 100);
+ok('作业满分 100(5题×20)', quizFullFrom('作业满分: 100.00，共 5道 题') === 100);
+ok('作业满分 半角冒号', quizFullFrom('作业满分:80.00') === 80);
+ok('无满分→null', quizFullFrom('总分: 80.00') === null);
 
 console.log(`\n=== ${pass} 通过 / ${fail} 失败 ===`);
 process.exit(fail ? 1 : 0);
