@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.7.3
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。v2.7.3：填空题「随流式逐空实时填入」——每个空答案在流里一闭合就灌进页面对应 textarea，前端可见代码一空一空填出来(gapPairsFrom 抽已闭合 JSON 对)；配置页 BaseURL 占位/提示改为 DeepSeek 默认(https://api.deepseek.com)。
+// @version      2.7.4
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。v2.7.3：填空题「随流式逐空实时填入」——每个空答案在流里一闭合就灌进页面对应 textarea，前端可见代码一空一空填出来(gapPairsFrom 抽已闭合 JSON 对)；配置页 BaseURL 占位/提示改为 DeepSeek 默认(https://api.deepseek.com)。v2.7.4：_ce 在线编辑器题改为「流式逐字写入编辑器 + 点原生提交按钮」——清空编辑器→聚焦→流式把代码逐字写进 CodeMirror(replaceRange 末尾追加)→点 #cgSubmitBtn 原生提交触发判题动画→pollVerdict 等结果；点击失败回退 GM 表单兜底，判题信号仍走 HTTP 轮询。前端肉眼可见解题全过程。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -387,6 +387,26 @@
             });
         };
     }
+    // _ce 在线编辑题：把流式累积全文(content)的「新增部分」逐帧追加进 CodeMirror，肉眼可见逐字生成。
+    // 只在开头 setValue('') 清空一次，中途纯 replaceRange 末尾追加(绝不中途 setValue，否则光标重置/闪烁)；16ms 批量 + operation 合并刷新。
+    function makeCeLiveFiller() {
+        const host = document.querySelector('.CodeMirror');
+        const cm = host && host.CodeMirror;
+        if (!cm) return null; // 无 CM 实例 → 返回 null，调用方兜底
+        cm.setValue(''); try { cm.clearHistory(); } catch (_) {} try { cm.focus(); } catch (_) {} // ①清空 ②清 undo(防撤回旧码) ③聚焦
+        let lastWritten = 0, buf = '', timer = null;
+        const flush = () => {
+            timer = null; if (!buf) return;
+            const chunk = buf; buf = '';
+            cm.operation(() => { const end = { line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length }; cm.replaceRange(chunk, end, undefined, '*stream'); }); // 末尾追加；'*stream' 合并 undo
+            const e2 = { line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length };
+            try { cm.setCursor(e2); cm.scrollIntoView(e2, 20); } catch (_) {} // 光标跟随 + 滚动到末尾
+        };
+        return {
+            push(content) { if (!content || content.length <= lastWritten) return; buf += content.slice(lastWritten); lastWritten = content.length; if (!timer) timer = setTimeout(flush, 16); }, // content=累积全文，只追加新增
+            finalize(finalCode) { if (timer) { clearTimeout(timer); timer = null; } flush(); if (typeof finalCode === 'string') cm.setValue(finalCode); try { cm.focus(); } catch (_) {} }, // 收尾：flush 残留 + 纯代码校正(去 ```java 围栏)
+        };
+    }
     // 统一提取：根据题型返回 problem 对象
     function extractFor(kind) {
         const title = titleOf();
@@ -721,9 +741,19 @@
     }
     // _ce 在线代码编辑器题：源码走表单字段 cgsoucecode + byCE（页面无 FILE1 文件框），实测与 programList 同判题端点
     function submitCE(ids, code, mainClass) {
+        // 代码已由 ceLive 流式写入 CodeMirror；优先点页面原生 #cgSubmitBtn(cgsrcSubmit())——触发原生判题动画(showmessageFRAME)。
+        // 找不到按钮/点击异常 → 回退原 GM 表单 GBK 提交(submitFormGBK)兜底，保证「一定交得出去」。返回 {via} 供调用方决定是否再手动播动画。
+        const btn = document.getElementById('cgSubmitBtn');
+        if (btn && !btn.disabled) {
+            try {
+                const ta = document.getElementById('cgsoucecode'), host = document.querySelector('.CodeMirror');
+                if (ta && host && host.CodeMirror) { ta.value = host.CodeMirror.getValue(); ta.dispatchEvent(new Event('input', { bubbles: true })); } // 防御性同步 textarea backing store
+                btn.click(); // 原生提交 + 原生判题动画
+                return Promise.resolve({ via: 'click' });
+            } catch (_) { /* 落兜底 */ }
+        }
         const wtime = Math.max(1, Math.round((Date.now() - pageT0) / 1000));
-        // 原生 GBK 表单提交中文源码（可读、与平台编码一致）；实测 _ce 提交后判题端点不变
-        return submitFormGBK(`${OJ}/assignment/showProcessMsg.jsp`, { doSubmit: 'true', byCE: 'true', wtime: String(wtime), progLanguage: 'java', javaMainCLass: mainClass || 'Main', problemID: ids.problemID, assignID: ids.assignID, cgsoucecode: code });
+        return submitFormGBK(`${OJ}/assignment/showProcessMsg.jsp`, { doSubmit: 'true', byCE: 'true', wtime: String(wtime), progLanguage: 'java', javaMainCLass: mainClass || 'Main', problemID: ids.problemID, assignID: ids.assignID, cgsoucecode: code }).then(() => ({ via: 'gmform' }));
     }
     // 提交后让页面自带的「运行结果」iframe 播放原生判题动画（GM_xhr 提交本身不触发它）
     function showNativeProgress(ids) {
@@ -894,6 +924,7 @@
         const problemBudgetMs = s.problemBudgetMs || PROBLEM_BUDGET_MS, callTimeoutMs = s.callTimeoutMs || CALL_TIMEOUT_MS;
         let messages = buildMessages(problem); // [system, user(题目)]，后续把每版回复与错误样例追加进同一对话（每连错2次压缩一次）
         const gapLive = (kind === 'gap') ? makeGapLiveFiller() : null; // 填空题：流式逐空填入页面 textarea（前端可见）
+        const ceLive = (kind === 'ce') ? makeCeLiveFiller() : null; // _ce 在线编辑题：流式逐字写入 CodeMirror（前端可见）
         const t0 = Date.now();
         let deadline = t0 + problemBudgetMs; // 升级强模型那版会重置为全新预算
         let best = null, baselineTime = '', timedOut = false, failStreak = 0;
@@ -909,11 +940,11 @@
             let res;
             try {
                 LOG.push('info', `调用 ${opt.model}${opt.thinking ? '·思考' : ''}（第 ${i + 1}/${plan.length} 版·${MODE_CN[opt.mode] || opt.mode}·上限 ${fmtN(versionTokens)}tok）`);
-                const raw = await callLLM(messages, { ...opt, maxTokens: versionTokens }, apiKey, callTimeoutMs, streamHooks(gapLive)); // 填空题随流式逐空填入页面
+                const raw = await callLLM(messages, { ...opt, maxTokens: versionTokens }, apiKey, callTimeoutMs, streamHooks(gapLive || (ceLive ? (c => ceLive.push(c)) : null))); // gap/_ce 随流式实时写入页面
                 clearTransientBanners();              // 拿到响应=连通且鉴权 OK，清掉连接/超时/卡住类提醒
                 LOG.push('gen', `模型已出答案（${raw.length} 字）`);
                 messages.push({ role: 'assistant', content: raw }); // 模型本版回复留在上下文里
-                let display;
+                let display, submitVia = 'gmform';
                 if (kind === 'gap') {
                     const answers = parseGapAnswers(raw);
                     if (!Object.keys(answers).length) throw new Error('未解析出填空 JSON');
@@ -923,11 +954,14 @@
                     if (!/class\s+\w+/.test(code)) throw new Error('生成结果不是有效 Java');
                     const mainClass = (kind === 'iface' && problem.mainClass) ? problem.mainClass : detectMainClass(code);
                     display = code;
-                    if (kind === 'ce') await submitCE(ids, code, mainClass);   // 在线编辑题走 cgsoucecode/byCE
-                    else await submitFile(ids, code, mainClass);
+                    if (kind === 'ce') {
+                        if (ceLive) ceLive.finalize(code); // 流式收尾：flush 残留 + 用纯代码校正(去围栏)
+                        else { const h = document.querySelector('.CodeMirror'); if (h && h.CodeMirror) h.CodeMirror.setValue(code); } // 无填充器兜底直接写
+                        const r = await submitCE(ids, code, mainClass); submitVia = (r && r.via) || 'gmform'; // 点 #cgSubmitBtn(原生动画) 或 GM 兜底
+                    } else await submitFile(ids, code, mainClass);
                 }
                 LOG.push('info', '已提交，等待判题…');
-                showNativeProgress(ids); // 恢复页面原生判题动画
+                if (submitVia !== 'click') showNativeProgress(ids); // 点原生按钮已自带判题动画；GM 兜底/file 才手动播
                 const v = await pollVerdict(ids.assignID, ids.problemID, baselineTime, Math.max(deadline, Date.now() + 90000)); // 已提交→至少留 90s 轮询判题，别因预算耗尽 deadline 过期而丢已交结果
                 baselineTime = submitTimeOf(v && v.content) || baselineTime;
                 const sc = scoreOf(v && v.content || '');
