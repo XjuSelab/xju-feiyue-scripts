@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.7.1
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。
+// @version      2.7.2
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -492,6 +492,7 @@
     const STALL_FIRST = 20; // 秒：生成阶段静默超过该阈值才视作「可能卡住」
     const STALL_THINK = 35; // 秒：思考/等待阶段更宽容（推理模型常先静默/边思考边出，静默≠卡住），到阈值也只平静提示「仍在思考」
     const STALL_HARD = 60;  // 秒：生成阶段静默到此硬阈值且已有正文，主动收口已拿到的正文（避免服务端流完不发 [DONE] 又不关连接时干等到超时）
+    const STALL_WAIT_HARD = 75; // 秒：非思考调用「零字节等待」到此硬阈值=网关卡死，主动中止本次（不再干等到 6min 超时；思考模式不适用，推理常先静默）
     // 纯函数（可单测）：把(阶段, 静默秒数)映射成状态展示——把「思考 / 生成 / 卡住」判定集中一处，
     // 关键：只有 gen（已在出正文）阶段的静默才报「可能卡住」并弹 banner；think/wait 阶段一律按「在思考/等待」处理，不误判为慢/卡住。
     function streamStallState(phase, secs) {
@@ -557,9 +558,9 @@
         if (/deepseek/i.test(baseURL)) payload.thinking = { type: opts.thinking ? 'enabled' : 'disabled' };
         return new Promise((resolve, reject) => {
             let lastLen = -1, lastDataAt = Date.now(), hadData = false, settled = false, stallT = null, phase = 'wait';
-            let streamBuf = '', gotStream = false, lastContent = '', reader = null, grabbed = false, ticks = 0;
+            let streamBuf = '', gotStream = false, lastContent = '', reader = null, grabbed = false, ticks = 0, reqHandle = null;
             const dec = (typeof TextDecoder !== 'undefined') ? new TextDecoder('utf-8') : null;
-            const fin = fn => { if (settled) return; settled = true; if (stallT) clearInterval(stallT); if (reader) { try { reader.cancel(); } catch (_) {} } fn(); };
+            const fin = fn => { if (settled) return; settled = true; if (stallT) clearInterval(stallT); if (reader) { try { reader.cancel(); } catch (_) {} } if (reqHandle) { try { reqHandle.abort(); } catch (_) {} } fn(); };
             const onText = txt => {
                 const r = parseSSE(txt);
                 if (!r.sawSSE) return;
@@ -590,10 +591,11 @@
             stallT = setInterval(() => {
                 const gap = Math.round((Date.now() - lastDataAt) / 1000);
                 if (phase === 'gen' && gap >= STALL_HARD && hadData && lastContent) return fin(() => resolve(lastContent));
+                if (phase === 'wait' && !opts.thinking && gap >= STALL_WAIT_HARD) return fin(() => reject(llmErr(`等待首个响应 ${gap}s 仍无任何返回——判定网关卡死，已中止本次以便重试`, 'stall')));
                 const thr = phase === 'gen' ? STALL_FIRST : STALL_THINK;
                 if (gap >= thr && hooks && hooks.onStall) hooks.onStall(gap, hadData, phase);
             }, 1000);
-            GM_xmlhttpRequest({
+            reqHandle = GM_xmlhttpRequest({
                 method: 'POST', url: baseURL + '/chat/completions', data: JSON.stringify(payload),
                 responseType: 'stream', timeout: Math.max(8000, timeoutMs || 120000),
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'Accept': 'text/event-stream' },
@@ -873,11 +875,11 @@
         const t0 = Date.now();
         let deadline = t0 + problemBudgetMs; // 升级强模型那版会重置为全新预算
         let best = null, baselineTime = '', timedOut = false, failStreak = 0;
-        let activeI = -1, versionTokens = 0, versionBumps = 0, capRetried = false; // 自适应 max_tokens 同版重试状态(starved→翻倍 / capped→学习上限)
+        let activeI = -1, versionTokens = 0, versionBumps = 0, capRetried = false, stallRetries = 0; // 自适应 max_tokens 同版重试状态(starved→翻倍 / capped→学习上限 / stall→网关卡原样重试)
         try { baselineTime = submitTimeOf((parseVerdict(await fetchVerdict(ids.assignID, ids.problemID)) || {}).content); } catch (_) {}
         for (let i = 0; i < plan.length; i++) {
             const opt = plan[i];
-            if (i !== activeI) { activeI = i; versionTokens = autoTokens(opt, s, capFor(host, opt.model)); versionBumps = 0; capRetried = false; } // 进入「新」版才初始化 token 预算；i-- 重试同版时保持不变
+            if (i !== activeI) { activeI = i; versionTokens = autoTokens(opt, s, capFor(host, opt.model)); versionBumps = 0; capRetried = false; stallRetries = 0; } // 进入「新」版才初始化 token 预算；i-- 重试同版时保持不变
             if (opt.resetBudget) deadline = Date.now() + problemBudgetMs; // 升级强模型：重置单题时间预算（须先于下面的超时判定，否则被原余量误杀）
             if (deadline - Date.now() < 20000) { timedOut = true; break; } // 单题不足 20s 不再起新一版
             if (opt.compactBefore) messages = compactMessages(messages, problem); // 升级前压成干净上下文：题目+最近两轮代码与失败反馈
@@ -933,6 +935,12 @@
                     if (!capRetried && deadline - Date.now() > 30000) {
                         capRetried = true; versionTokens = learned;
                         LOG.push('warn', `模型 ${opt.model} 不支持该 max_tokens，已降到 ${fmtN(learned)} 并记住上限、重试本版`);
+                        i--; continue;
+                    }
+                } else if (e.kind === 'stall') { // 网关卡死(零字节等待超时)：瞬时问题，原样重试本版(不前进版本/不计 failStreak)，封顶 2 次防死循环
+                    if (stallRetries < 2 && deadline - Date.now() > 30000) {
+                        stallRetries++;
+                        LOG.push('warn', `等待首字节超时(网关卡死) → 原样重试本版（第 ${stallRetries}/2 次）`);
                         i--; continue;
                     }
                 }
