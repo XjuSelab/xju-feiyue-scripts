@@ -46,6 +46,8 @@ ok('非数字键忽略', JSON.stringify(gapPairsFrom('{"x":"y"}')) === '{}');
 ok('作业满分 100(10题)', quizFullFrom('作业满分：100.00，共 10道 题') === 100);
 ok('作业满分 100(5题×20)', quizFullFrom('作业满分: 100.00，共 5道 题') === 100);
 ok('作业满分 半角冒号', quizFullFrom('作业满分:80.00') === 80);
+// 真页实测 DOM 串（CDP assignID=71）：全角冒号「：」+全角空格「　」+全角逗号——\s 须能吃全角空格 U+3000
+ok('作业满分 真页全角空格', quizFullFrom('重新抽取题目 作业满分： 100.00 ，共 10道 题 重新抽取') === 100);
 ok('无满分→null', quizFullFrom('总分: 80.00') === null);
 
 console.log(`\n=== ${pass} 通过 / ${fail} 失败 ===`);

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.8.0
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。v2.7.2：非思考调用加「等首字节熔断」——75s 还没收到第一个 token 即判定网关卡死，主动中止并原样重试本版(封顶2次)，不再干等到 6min 单次超时、并 abort 挂起请求；治理 GPT 代理/网关偶发「零字节挂几分钟」(连通性/提示词/对话长度均已排除，一题一对话+题内压缩，瓶颈是网关首字节)。附 probe-latency.mjs 实测端点延迟。v2.7.3：填空题「随流式逐空实时填入」——每个空答案在流里一闭合就灌进页面对应 textarea，前端可见代码一空一空填出来(gapPairsFrom 抽已闭合 JSON 对)；配置页 BaseURL 占位/提示改为 DeepSeek 默认(https://api.deepseek.com)。v2.7.4：_ce 在线编辑器题改为「流式逐字写入编辑器 + 点原生提交按钮」——清空编辑器→聚焦→流式把代码逐字写进 CodeMirror(replaceRange 末尾追加)→点 #cgSubmitBtn 原生提交触发判题动画→pollVerdict 等结果；点击失败回退 GM 表单兜底，判题信号仍走 HTTP 轮询。前端肉眼可见解题全过程。v2.8.0：章习题 v2——题库串行搜+命中即填→未命中 AI(每章一个对话)→回读真实满分(解析「作业满分:X」，修复 5题×20=100 的 80分误判满分→污染题库)→未满分按错题数反馈多轮重试(≤3轮、保留最佳防回退)→仅满分入库；提交后自动刷新页面总分(免手刷)；「一键开刷全部」纳入章节章习题(index.jsp answerForm→quiz 队列→runQuiz)。题库后端加 token 保护 /del 删题 + add_log 增删审计 + /log 查看。
+// @version      2.8.6
+// @description  希冀(CourseGrading/educg) AI 自动解题：编程/填空/接口/在线编辑题(提取→DeepSeek 生成→流式实时写入→自动提交→读判题)、章习题客观题(云题库优先→AI 多轮、按真实满分判定、未满分自动重抽题、仅满分入库)、一键串行开刷全部作业；流式实时进度、连错自动升级强模型(可深度思考)、铃铛日志诊断可一键复制。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -40,7 +40,9 @@
         THINKING: 'ds_thinking', AUTO_SUBMIT: 'cg_auto_submit', MAX_ATTEMPTS: 'cg_max_attempts',
         SKIP_PASSED: 'cg_skip_passed', GRIND: 'cg_grind_state', MODELS_CACHE: 'ds_models_cache', LOG: 'cgai_log',
         MAX_TOKENS: 'cg_max_tokens', CALL_TIMEOUT: 'cg_call_timeout', PROBLEM_BUDGET: 'cg_problem_budget', TOKENS_CAP: 'cg_tokens_cap',
+        AUTO_REDRAW: 'cg_auto_redraw', QUIZ_REDRAW: 'cg_quiz_redraw',
     };
+    const REDRAW_MAX = 10, REDRAW_MIN_LEFT = 3;   // 章习题未满分自动重抽题：初始 10 次额度（对齐 educg「最多可抽取 10 次」），剩余额度 ≥3 才继续重抽（保留余量）
     const VERSION = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '2.6.1';
     const DEFAULTS = { baseURL: 'https://api.deepseek.com', model: 'deepseek-chat', strongModel: 'deepseek-reasoner' };
     const MODEL_SUGGEST = ['deepseek-chat', 'deepseek-reasoner', 'gpt-5.5', 'gpt-5.4-pro'];
@@ -57,6 +59,7 @@
         autoSubmit: GM_getValue(STORE.AUTO_SUBMIT, true),
         maxAttempts: +GM_getValue(STORE.MAX_ATTEMPTS, 3),
         skipPassed: GM_getValue(STORE.SKIP_PASSED, true),
+        autoRedraw: GM_getValue(STORE.AUTO_REDRAW, true),                         // 章习题未满分自动重抽题（仅手动「做章习题」时生效）
         maxTokens: +GM_getValue(STORE.MAX_TOKENS, 0) || 0,                        // 0=自动(见 autoTokens)
         callTimeoutMs: (+GM_getValue(STORE.CALL_TIMEOUT, 0) || 0) * 1000,        // UI 存秒；0=默认 CALL_TIMEOUT_MS
         problemBudgetMs: (+GM_getValue(STORE.PROBLEM_BUDGET, 0) || 0) * 1000,    // UI 存秒；0=默认 PROBLEM_BUDGET_MS
@@ -64,6 +67,11 @@
     const getGrind = () => { try { return JSON.parse(GM_getValue(STORE.GRIND, '') || 'null'); } catch (_) { return null; } };
     const setGrind = g => GM_setValue(STORE.GRIND, JSON.stringify(g));
     const clearGrind = () => GM_deleteValue(STORE.GRIND);
+    // 章习题「未满分自动重抽题」会话（跨页面刷新续跑，镜像开刷 grind 的持久化+boot 续跑）
+    const getRedraw = () => { try { return JSON.parse(GM_getValue(STORE.QUIZ_REDRAW, '') || 'null'); } catch (_) { return null; } };
+    const setRedraw = r => GM_setValue(STORE.QUIZ_REDRAW, JSON.stringify(r));
+    const clearRedraw = () => GM_deleteValue(STORE.QUIZ_REDRAW);
+    const curAssignID = () => (location.search.match(/assignID=(\d+)/) || [])[1] || '';
     // 学习到的「模型 token 上限」缓存（per host|model）：某模型 400(max_tokens 超限)后记住其上限，后续请求自动钳到该值，避免反复 400（如 deepseek-chat 自学回 8192）。
     const getCaps = () => { try { return JSON.parse(GM_getValue(STORE.TOKENS_CAP, '') || '{}') || {}; } catch (_) { return {}; } };
     const capFor = (host, model) => { const n = getCaps()[host + '|' + model]; return (typeof n === 'number' && n > 0) ? n : 0; };
@@ -1269,8 +1277,12 @@
         if (!ans) return false;
         if (q.type === 'judge' && q.radios.length) {
             const yes = /^(对|正确|true|t|是|√|y|a)/i.test(ans);
-            let hit = q.radios.find(r => { const lab = (r.value || '') + ' ' + (r.closest('label') ? r.closest('label').innerText : (r.parentElement || {}).innerText || ''); return yes ? /对|正确|true|√/i.test(lab) : /错|false|×/i.test(lab); });
-            if (!hit) hit = q.radios[yes ? 0 : 1];
+            // 只能用 radio 的 value 判定（educg：value=true→正确 / false→错误）。绝不能用 label/parent 文本——
+            // 这里取到的是整道题文本，同时含「正确」「错误」，会让「错误」分支的 /错/ 永远先命中第一个(正确)radio，
+            // 导致所有判断题被误选成「正确」、答案为「错误」的判断题永远判错（本仓真页血泪坑，第1章 80分卡死根因）。
+            const vy = /^(true|1|正确|对|是|√|y)$/, vn = /^(false|0|错误|错|×|n)$/;
+            let hit = q.radios.find(r => { const v = ('' + (r.value || '')).trim().toLowerCase(); return yes ? vy.test(v) : vn.test(v); });
+            if (!hit) hit = q.radios[yes ? 0 : 1];   // 兜底按顺序（educg：正确在前、错误在后）
             if (!hit) return false;
             hit.checked = true;
             // 模拟点击——前端可见选中 + 触发页面原生提交反馈
@@ -1292,6 +1304,7 @@
         return false;
     }
     async function runQuiz(inGrind) {
+        inGrind = inGrind === true;   // 防御：作为按钮 onclick 时会收到事件对象，强制布尔（否则 !inGrind 恒 false→自动重抽等逻辑失效）
         if (!ensureConfig()) return null;
         if (!isQuizPage()) { if (!inGrind) setStatus('本页不是章习题（无内联客观题）。', ''); return null; }
         if (!inGrind) { busy = true; refreshButtons(); }
@@ -1301,11 +1314,13 @@
                 const ifr = document.createElement('iframe'); ifr.name = 'frame_problemhandler'; ifr.style.display = 'none'; document.body.appendChild(ifr);
             }
             const apiKey = getKey(), s = settings(), qs = extractQuiz();
-            const readScore = async () => { try { return quizScoreFrom(await gmGetText(location.href)); } catch (_) { return null; } };
+            const domText = () => (document.body && document.body.innerText) || '';   // 「作业满分/总分」面板由页面 JS 渲染，gmGetText 抓的服务端 HTML 里根本没有，必须读实时 DOM
+            const readScore = async () => { let v = null; try { v = quizScoreFrom(await gmGetText(location.href)); } catch (_) {} return v == null ? quizScoreFrom(domText()) : v; };
             let html0 = ''; try { html0 = await gmGetText(location.href); } catch (_) {}
-            const full = quizFullFrom(html0) || qs.length * 10;            // 真实满分(修复 5×20 章节 80分误判)
+            // 真实满分：原始 HTML 缺则读实时 DOM；都没有才退化「题数×10」。缺 DOM 这步会把 5题×20=100 的 80分误判满分→显示 8/5 全对、并把含错答案的整章污染进题库（→下次题库又喂回错答案，依旧 80 分）
+            const full = quizFullFrom(html0) || quizFullFrom(domText()) || qs.length * 10;
             const perQ = full / Math.max(1, qs.length);
-            let after = quizScoreFrom(html0); if (after == null) after = quizScoreFrom(document.body.innerText);
+            let after = quizScoreFrom(html0); if (after == null) after = quizScoreFrom(domText());
             LOG.push('info', `章习题：${qs.length} 题，满分 ${full}（当前 ${after}）— 题库优先(串行) → AI(多轮)`);
             // ① 串行：逐题搜题库，命中立即填+提交（搜完一题就选上）
             const ans = {}, misses = [];
@@ -1326,12 +1341,24 @@
             await sleep(1200); after = await readScore(); refreshQuizScore(after);
             // ② AI 多轮（每章一个对话）：先解未命中；未满分且有 AI 题 → 喂错题数反馈重做，≤3 轮，保留最佳
             let messages = null, best = { score: after == null ? -1 : after, ans: { ...ans } };
+            const qHost = getBaseURL().replace(/^https?:\/\//, '');
             for (let round = 1; round <= 3 && best.score < full; round++) {
+                const useStrong = round >= 3;                                  // 末轮(第3次)升级「强模型(pro)+深度思考」攻坚——前两轮仍用快模型不思考
+                const qModel = useStrong ? (s.strongModel || s.model) : s.model;
+                const qTokens = useStrong ? autoTokens({ thinking: true }, s, capFor(qHost, qModel)) : 4096;   // 思考要给足 token，4096 会被推理耗尽→空手而归
                 let target;
                 if (round === 1) {
-                    if (!misses.length) break;
-                    messages = quizMessages(misses); target = misses;
-                    setStatus(`题库命中 ${bankHit}/${qs.length}，AI 解 ${misses.length} 题（第1轮）…`, 'busy', true);
+                    // 未命中题优先；若整章都命中题库却仍未满分(说明题库里混了错答案)，让 AI 复核全部题——否则会"依旧80分"卡死、AI 永远没机会纠错
+                    target = misses.length ? misses : qs;
+                    if (!target.length) break;
+                    messages = quizMessages(target);
+                    setStatus(misses.length ? `题库命中 ${bankHit}/${qs.length}，AI 解 ${misses.length} 题（第1轮）…` : `全命中题库但未满分，AI 复核全部 ${qs.length} 题（第1轮）…`, 'busy', true);
+                } else if (useStrong) {
+                    // 末轮强模型：丢开历史、独立复核「全部题(含题库命中)」，以纠正题库里混入的错答案（best 回退保证不会更差）
+                    target = qs;
+                    messages = quizMessages(qs);
+                    messages[messages.length - 1].content += `\n\n（这套题此前仅得 ${best.score}/${full} 未满分，其中可能有题库给出的错误答案。请你独立、严谨地重新作答全部题，不要受任何已有答案影响。）`;
+                    setStatus(`未满分 ${best.score}/${full}，强模型 ${qModel}·深度思考复核全部 ${qs.length} 题…`, 'busy', true);
                 } else {
                     const aiQs = qs.filter(q => q.src === 'AI'); if (!aiQs.length) break;
                     const wrong = Math.max(1, Math.round((full - best.score) / perQ));
@@ -1340,13 +1367,13 @@
                     setStatus(`未满分 ${best.score}/${full}，AI 第 ${round} 轮重做 ${aiQs.length} 题…`, 'busy', true);
                 }
                 let raw;
-                try { raw = await callLLM(messages, { model: s.model, thinking: false, temperature: 0, maxTokens: 4096 }, apiKey, s.callTimeoutMs || CALL_TIMEOUT_MS, streamHooks()); }
+                try { raw = await callLLM(messages, { model: qModel, thinking: useStrong, temperature: 0, maxTokens: qTokens }, apiKey, s.callTimeoutMs || CALL_TIMEOUT_MS, streamHooks()); }
                 catch (e) { LOG.push('err', `章习题 AI 第${round}轮失败：` + (e.message || e), e && e.extra); applyBanner(e); break; }
                 clearTransientBanners(); messages.push({ role: 'assistant', content: raw });
                 const map = parseQuizAnswers(raw); let n = 0;
                 for (const q of target) { if (map[q.pid] != null) { ans[q.pid] = map[q.pid]; q.src = 'AI'; if (fillQuizAnswer(q, ans[q.pid])) { n++; await sleep(1200); } } }
                 await sleep(1200); after = await readScore(); refreshQuizScore(after);
-                LOG.push('info', `AI 第 ${round} 轮提交 ${n} 题 → 总分 ${after}/${full}`);
+                LOG.push('info', `AI 第 ${round} 轮${useStrong ? `（强模型 ${qModel}·思考）` : ''}提交 ${n} 题 → 总分 ${after}/${full}`);
                 if (after != null && after > best.score) best = { score: after, ans: { ...ans } };
             }
             // ③ 应用最佳：若当前不是最佳（某轮越改越差），回填最佳答案（保留最佳分）
@@ -1355,17 +1382,41 @@
                 if (rev) { after = await readScore(); refreshQuizScore(after); LOG.push('info', `回填最佳答案 ${rev} 题 → ${after}/${full}`); }
             }
             refreshQuizScore(after);
-            // ④ 仅满分入库（按真实满分判定，修复污染根因；存内容防乱序）
+            // ④ 满分入库（按真实满分判定）+ 清重抽会话；未满分 →（仅手动）自动重抽题
             if (after != null && after >= full) {
+                clearRedraw();   // 满分达成，结束重抽会话
                 let added = 0; qs.forEach(q => { const cc = answerContent(q, ans[q.pid]); if (cc.length) { bankAdd(q.stem, QTYPE_CN[q.type], cc); added++; } });
                 LOG.push('ok', `章习题满分 ${after}/${full}（题库命中 ${bankHit}）→ ${added} 题正确答案入云题库`);
                 setStatus(ICON.ok + `章习题满分 ${after}/${full}！命中 ${bankHit}，正确答案已入题库。`, 'ok');
             } else {
                 LOG.push('warn', `章习题 ${after}/${full}（命中 ${bankHit}）— 未满分，不入库`);
+                // 未满分：3 轮 AI 重试仍未满分 → 自动重抽题换一套（仅手动「做章习题」生效，开刷不介入）。autoRedraw 现读，便于中途关开关即时停。
+                if (!inGrind && settings().autoRedraw && curAssignID() && await tryAutoRedraw(curAssignID(), qs, after, full)) {
+                    return { ok: false, redrawing: true, passed: (after != null && perQ) ? Math.round(after / perQ) : 0, total: qs.length, score: after, title: '章习题' };
+                }
                 setStatus(`章习题 ${after}/${full}（命中 ${bankHit}）未满分；可再点「做章习题」重试或换模型。`, 'busy');
             }
             return { ok: after != null && after >= full, passed: (after != null && perQ) ? Math.round(after / perQ) : 0, total: qs.length, score: after, title: '章习题' };
         } finally { if (!inGrind) { busy = false; refreshButtons(); } }
+    }
+    // 章习题未满分自动重抽题：管理重抽额度（初始 REDRAW_MAX、剩余 ≥REDRAW_MIN_LEFT 才重抽），POST doChoose 服务端重抽后重载页面 → boot 续跑。返回 true=已发起重抽（调用方应即返回，页面即将刷新）
+    async function tryAutoRedraw(assignID, qs, after, full) {
+        let sess = getRedraw();
+        if (!sess || String(sess.assignID) !== String(assignID)) sess = { active: true, assignID: String(assignID), left: REDRAW_MAX, lastSig: '' };
+        const sig = qs.map(q => q.pid).sort().join(',');
+        if (sess.lastSig && sess.lastSig === sig) {   // 重抽后题面没变 = educg 已到抽取上限/没真重抽 → 收手
+            clearRedraw(); LOG.push('warn', '重抽后题目未变化（可能已达 educg 抽取上限），停止自动重抽，停在最佳分。'); return false;
+        }
+        if (sess.left < REDRAW_MIN_LEFT) {            // 剩余额度不足，保留余量不再自动重抽
+            clearRedraw(); LOG.push('warn', `自动重抽额度剩 ${sess.left}（<${REDRAW_MIN_LEFT}），停止；停在 ${after}/${full}，可手动重抽或换模型。`); return false;
+        }
+        sess.left -= 1; sess.lastSig = sig; setRedraw(sess);
+        LOG.push('info', `章习题 ${after}/${full} 未满分（3 轮已尽）→ 自动重抽题，重抽后剩余额度 ${sess.left}`);
+        setStatus(`未满分，自动重抽题中…（剩余额度 ${sess.left}）`, 'busy', true);
+        try { await gmPostForm(`${OJ}/assignment/randomAssign.jsp`, `assignID=${assignID}&doChoose=true`); } catch (_) {}
+        await sleep(900);
+        location.href = `${OJ}/assignment/index.jsp?assignID=${assignID}`;   // 重载新题 → boot 检测重抽会话续跑 runQuiz
+        return true;
     }
 
     function refreshButtons() {
@@ -1514,6 +1565,7 @@
                     <label class="cgai-chk"><input type="checkbox" id="cgai-think"> 思考模式</label>
                     <label class="cgai-chk"><input type="checkbox" id="cgai-auto"> 自动提交</label>
                     <label class="cgai-chk"><input type="checkbox" id="cgai-skip"> 跳过已满分</label>
+                    <label class="cgai-chk" title="章习题3轮AI仍未满分时，自动「重新抽取题目」换一套再做；初始10次额度、剩余≥3才继续（仅手动「做章习题」生效）"><input type="checkbox" id="cgai-redraw"> 失败自动重抽题</label>
                     <label class="f">重试次数 <input type="number" id="cgai-att" min="1" max="5"></label>
                 </div>
                 <div class="cgai-btns">
@@ -1577,14 +1629,16 @@
         const think = panel.querySelector('#cgai-think'); think.checked = s.thinking;
         const auto = panel.querySelector('#cgai-auto'); auto.checked = s.autoSubmit;
         const skip = panel.querySelector('#cgai-skip'); skip.checked = s.skipPassed;
+        const redraw = panel.querySelector('#cgai-redraw'); redraw.checked = s.autoRedraw;
         const att = panel.querySelector('#cgai-att'); att.value = s.maxAttempts;
         think.onchange = () => GM_setValue(STORE.THINKING, think.checked);
         auto.onchange = () => GM_setValue(STORE.AUTO_SUBMIT, auto.checked);
         skip.onchange = () => GM_setValue(STORE.SKIP_PASSED, skip.checked);
+        redraw.onchange = () => { GM_setValue(STORE.AUTO_REDRAW, redraw.checked); if (!redraw.checked) clearRedraw(); };
         att.onchange = () => GM_setValue(STORE.MAX_ATTEMPTS, Math.min(5, Math.max(1, +att.value || 3)));
         updateModelTxt();
         btnSolve.onclick = runSolveCurrent;
-        if (btnQuiz) btnQuiz.onclick = runQuiz;
+        if (btnQuiz) btnQuiz.onclick = () => runQuiz(false);
         panel.querySelector('#cgai-cfg').onclick = openConfig;
         panel.querySelector('#cgai-modelbtn').onclick = openConfig;
         panel.querySelector('#cfg-x').onclick = closeConfig;
@@ -1615,7 +1669,7 @@
 
     GM_registerMenuCommand('配置 (Base URL / API Key / 模型)', () => { if (panel) openConfig(); });
     GM_registerMenuCommand('日志 / 诊断（卡住/报错看这里）', () => { if (panel) { if (panel.style.display === 'none') { panel.style.display = 'flex'; if (fab) fab.style.display = 'none'; } openLog(); } });
-    GM_registerMenuCommand('停止开刷 / 清除进度', () => { clearGrind(); if (grindEl) renderGrind(); if (statusEl) setStatus('已清除开刷进度。', ''); if (btnGrind) refreshButtons(); });
+    GM_registerMenuCommand('停止开刷 / 清除进度（含自动重抽）', () => { clearGrind(); clearRedraw(); if (grindEl) renderGrind(); if (statusEl) setStatus('已清除开刷进度与自动重抽会话。', ''); if (btnGrind) refreshButtons(); });
 
     if (typeof window !== 'undefined' && window.__CGAI_EXPOSE__) {
         window.__CGAI_API__ = { htmlToText, titleOf, extractStatement, extractGap, extractFor, extractIds, getCur, pageType, discoverAssignList, discoverCourseID, parseAssignProblems, fetchAssignProblems, buildQueue, itemKey, parseJavaCode, detectMainClass, parseGapAnswers, gapPairsFrom, parseVerdict, submitTimeOf, scoreOf, verdictError, feedbackFromHtml, buildMessages, compactMessages, planFor, parseSSE, streamStallState, callLLM, getBaseURL, autoTokens, decideRetry, isCapErr, isQuizPage, extractQuiz, quizMessages, parseQuizAnswers, quizScoreFrom, quizFullFrom, qNorm, lettersFromTexts, answerContent, toAscii };
@@ -1625,7 +1679,13 @@
         LOG.load();
         buildPanel();
         const g = getGrind();
-        if (g && g.active && pageType()) setTimeout(grindStep, 1300); // pageType() 含 'quiz'(章习题)与各编程题型
+        if (g && g.active && pageType()) { setTimeout(grindStep, 1300); return; } // pageType() 含 'quiz'(章习题)与各编程题型；开刷优先
+        // 自动重抽题续跑：重抽后重载到本章 index.jsp → 自动再做一遍章习题（开刷未在跑时才介入）
+        const rd = getRedraw();
+        if (rd && rd.active && isQuizPage() && String(curAssignID()) === String(rd.assignID)) {
+            LOG.push('info', `检测到自动重抽会话（剩余额度 ${rd.left}），重新作答本章章习题…`);
+            setTimeout(() => runQuiz(false), 1500);
+        }
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
