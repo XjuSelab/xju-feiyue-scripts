@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         飞跃·解题 Solver
 // @namespace    https://feiyue.selab.top/feiyue-solver
-// @version      2.7.0
-// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。
+// @version      2.7.1
+// @description  希冀(CourseGrading/educg) 编程/填空/接口/在线编辑题：提取题目→DeepSeek 生成→自动提交→读判题结果；一键串行开刷所有作业(校验链接+排序)、开刷前自动抽取未抽题作业、失败读样例多版本重试、自动跳题。v2.3：流式响应(实时看到"思考/生成/卡住"，杜绝长生成时的"无响应")、铃铛日志诊断面板(特殊情况新手引导式提醒+一键复制诊断日志)。v2.4：同题上下文压缩(mod-2)+主模型连错3次后升级强模型(重置单题时间预算)。v2.4.4：支持「在线代码编辑器题」(programList_ce.jsp，源码走 cgsoucecode/byCE 提交)，修复此类题"识别不到"。v2.4.5：思考/生成/卡住状态按阶段判定——只有"出正文后静默"才报卡住，"思考中静默"不再误判为响应慢/卡住(思考阈值放宽到35s)。v2.4.6：用 responseType:stream 自读流——修复脚本猫(ScriptCat MV3)下"假流式/整段缓冲"(默认走原生 XHR 只在 onload 一次性回传正文)，让逐字进度真正实时；附启动探针、生成静默60s收口、流内 error 不再吞。v2.5.0：难题正确率修复——①上下文压缩保留"最近两轮"(代码+失败反馈)而非仅一轮，多版纠错不再失忆/反复踩坑 ②「面向样例」改为反推通用规则并警告硬编码必挂隐藏用例，不再鼓励打表过拟合。v2.6.0：自适应 max_tokens(思考模型默认 32768，思考耗尽预算空手而归时自动加大重试、并按模型学习其 token 上限避免 400)+解耦长思考超时(单次调用给足 6 分钟、不再被单题总时钟挤压秒杀，单题总预算抬到 15 分钟仅作版间闸门)，新增配置页可调 max_tokens/单次超时/单题预算三个旋钮(留空=自动)。v2.6.1：审查修复——capped 仅匹配真正的 max_tokens 超限(排除输入上下文超限/限流，避免误把它们学成坏的 token 上限缓存)；capped 学习改"被拒值减半、封顶 8192"逐版收敛(不再死写 8192)；已提交后至少轮询 90s 拿判题(防总预算耗尽后 deadline 过期、把已交答案当失败丢弃)。v2.7.0：新增「章习题」内联客观题(单选/判断/填空，answerForm→stuAnswerHandler.jsp)——题库优先(复用 feiyue-grinder-bank 云题库，存正确选项内容防乱序)→AI 兜底→逐题提交(≥1.2s)→满分入库，仅章习题页出现「做章习题」按钮；并修复中文源码在 GBK 平台乱码：_ce/填空/章习题走页面原生 GBK 表单提交(中文可读)，文件上传转 \uXXXX。v2.7.1：不再默认思考——章习题改用常规模型+关思考(简单客观题不再被推理模型拖到 80s+)，连错升级只升模型、思考与否尊重开关；章习题提交改为派发原生 input/click 事件触发页面 oninput 自动提交(模拟用户操作，前端可见填值+提交反馈动画)。
 // @author       winbeau
 // @homepageURL  https://github.com/XjuSelab/xju-feiyue-scripts
 // @supportURL   https://github.com/XjuSelab/xju-feiyue-scripts/issues
@@ -846,7 +846,7 @@
         }
         // 主模型连错 N(≥3) 次后，追加一版升级强模型（不占主版本槽）：进入前重置单题时间预算 + 压成干净上下文
         if (N >= 3 && strong !== s.model)
-            plan.push({ model: strong, thinking: true, temperature: 0, mode: 'escalate', escalate: true, resetBudget: true, compactBefore: true });
+            plan.push({ model: strong, thinking: s.thinking, temperature: 0, mode: 'escalate', escalate: true, resetBudget: true, compactBefore: true }); // 升级强模型，但思考与否尊重用户开关（不默认思考）
         return plan;
     }
     // 同题内上下文压缩：保留 base + 「最近两轮」(各版代码 + 失败反馈)，丢更早的累积。纯函数，可离线单测。
@@ -1191,10 +1191,24 @@
             const yes = /^(对|正确|true|t|是|√|y|a)/i.test(ans);
             let hit = q.radios.find(r => { const lab = (r.value || '') + ' ' + (r.closest('label') ? r.closest('label').innerText : (r.parentElement || {}).innerText || ''); return yes ? /对|正确|true|√/i.test(lab) : /错|false|×/i.test(lab); });
             if (!hit) hit = q.radios[yes ? 0 : 1];
-            if (hit) { hit.checked = true; q.form.submit(); return true; }
-            return false;
+            if (!hit) return false;
+            hit.checked = true;
+            // 模拟点击——前端可见选中 + 触发页面原生提交反馈
+            ['mousedown', 'mouseup', 'click'].forEach(t => hit.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true })));
+            hit.dispatchEvent(new Event('change', { bubbles: true }));
+            if (!hit.getAttribute('onchange') && !hit.onchange) q.form.submit(); // 无原生提交钩子才兜底
+            return true;
         }
-        if (q.a1) { q.a1.value = q.type === 'choice' ? ans.toUpperCase().replace(/[^A-D]/g, '') : ans; q.form.submit(); return true; }
+        if (q.a1) {
+            const val = q.type === 'choice' ? ans.toUpperCase().replace(/[^A-D]/g, '') : ans;
+            // 模拟用户输入：填值后派发原生 input 事件，触发页面自带 oninput(=form.submit)，前端可见填值+提交反馈
+            q.a1.focus(); q.a1.value = val;
+            q.a1.dispatchEvent(new Event('input', { bubbles: true }));
+            q.a1.dispatchEvent(new Event('change', { bubbles: true }));
+            q.a1.blur();
+            if (!q.a1.getAttribute('oninput') && !q.a1.oninput) q.form.submit(); // 无 oninput 才兜底直接提交
+            return true;
+        }
         return false;
     }
     async function runQuiz() {
@@ -1227,7 +1241,8 @@
             if (misses.length) {
                 setStatus(`题库命中 ${bankHit}/${qs.length}，AI 解 ${misses.length} 题…`, 'busy', true);
                 let raw;
-                try { raw = await callLLM(quizMessages(misses), { model: s.strongModel || s.model, thinking: true, temperature: 0, maxTokens: 8192 }, apiKey, 300000, streamHooks()); }
+                // 章习题是简单客观题：用常规模型、不思考（避免被推理模型拖到 80s+）；不再默认走强模型/思考
+                try { raw = await callLLM(quizMessages(misses), { model: s.model, thinking: false, temperature: 0, maxTokens: 4096 }, apiKey, s.callTimeoutMs || CALL_TIMEOUT_MS, streamHooks()); }
                 catch (e) { setStatus('AI 作答失败：' + (e.message || e), 'err'); LOG.push('err', '章习题 AI 失败：' + (e.message || e), e && e.extra); applyBanner(e); return; }
                 clearTransientBanners();
                 const map = parseQuizAnswers(raw);
