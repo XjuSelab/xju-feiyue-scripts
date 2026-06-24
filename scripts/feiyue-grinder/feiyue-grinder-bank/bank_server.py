@@ -4,13 +4,16 @@
 # 存"正确选项的内容文本"(非字母,防选项乱序);搜题按题干模糊+精准,返回正确选项文本。
 # 路由(经 nginx /feiyue-grinder-bank/ 反代):
 #   GET  /search?q=<题干>&type=<题型>  -> {"texts":["..."],"qtype":"单选题","votes":3,"stem":"..."} 或 {"texts":null}
-#   POST /add  {"stem","qtype","texts":["正确选项内容",...]}  -> {"ok":true,"votes":N}
+#   POST /add  {"stem","qtype","texts":["正确选项内容",...]}  -> {"ok":true,"votes":N}   (写 add_log 审计)
+#   POST /del  {"token","stem"|"id"[,"qtype","ans_key"]}     -> {"ok":true,"deleted":N}  (需 BANK_ADMIN_TOKEN；写 del 审计)
+#   GET  /log?token=&limit=N -> {"log":[...]}   (需 token；查看增/删审计)
 #   GET  /stats -> {"rows":N,"stems":M}   GET /health -> {"ok":true}
 import os, re, json, sqlite3, threading, urllib.parse, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DB = os.environ.get("BANK_DB", "/data/bank.db")
 PORT = int(os.environ.get("BANK_PORT", "8799"))
+ADMIN_TOKEN = os.environ.get("BANK_ADMIN_TOKEN", "")  # /del 与 /log 需此 token；为空=禁用(防公网随意删库/看日志)
 _lock = threading.Lock()
 _PUNCT = re.compile(r"[\s　 ,.;:!?，。、；：！？（）()\[\]【】{}<>《》\"'`~·…—\-_/\\|=+*&^%$#@]+")
 
@@ -39,6 +42,9 @@ def init():
             updated_at TEXT,
             UNIQUE(stem_norm, ans_key))""")
         c.execute("CREATE INDEX IF NOT EXISTS idx_stem_norm ON answers(stem_norm)")
+        c.execute("""CREATE TABLE IF NOT EXISTS add_log(
+            id INTEGER PRIMARY KEY,
+            ts TEXT, action TEXT, stem TEXT, qtype TEXT, texts TEXT, votes INTEGER, note TEXT)""")  # 增/删审计
         c.commit()
 
 def _row_out(r):
@@ -81,7 +87,40 @@ def add(stem, qtype, texts):
                   (ns, (stem or "")[:1000], qtype or "", json.dumps(texts, ensure_ascii=False), key, now))
         c.commit()
         v = c.execute("SELECT votes FROM answers WHERE stem_norm=? AND ans_key=?", (ns, key)).fetchone()
-    return v[0] if v else 1
+    votes = v[0] if v else 1
+    _log("add", stem, qtype, texts, votes)
+    return votes
+
+def _log(action, stem, qtype, texts, votes, note=""):
+    try:
+        with db() as c:
+            c.execute("INSERT INTO add_log(ts,action,stem,qtype,texts,votes,note) VALUES(?,?,?,?,?,?,?)",
+                      (datetime.datetime.utcnow().isoformat(), action, (stem or "")[:1000], qtype or "",
+                       json.dumps(texts or [], ensure_ascii=False), votes, note))
+            c.commit()
+    except Exception:
+        pass
+
+def delete(stem=None, qtype=None, ans_key_val=None, row_id=None):
+    with _lock, db() as c:
+        if row_id is not None:
+            n = c.execute("DELETE FROM answers WHERE id=?", (row_id,)).rowcount
+        else:
+            ns = norm(stem or "")
+            if len(ns) < 1:
+                return 0
+            sql, args = "DELETE FROM answers WHERE stem_norm=?", [ns]
+            if qtype: sql += " AND qtype=?"; args.append(qtype)
+            if ans_key_val: sql += " AND ans_key=?"; args.append(ans_key_val)
+            n = c.execute(sql, args).rowcount
+        c.commit()
+    _log("del", stem or ("#id=" + str(row_id)), qtype, [], n, "deleted=%d" % n)
+    return n
+
+def recent_log(limit=50):
+    with db() as c:
+        rows = c.execute("SELECT ts,action,qtype,votes,note,substr(stem,1,60) FROM add_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [{"ts": r[0], "action": r[1], "qtype": r[2], "votes": r[3], "note": r[4], "stem": r[5]} for r in rows]
 
 def stats():
     with db() as c:
@@ -109,6 +148,9 @@ class H(BaseHTTPRequestHandler):
                 r = search(qs.get("q", [""])[0], qs.get("type", [""])[0])
                 return self._send(200, r if r else {"texts": None})
             if path.endswith("/stats"): return self._send(200, stats())
+            if path.endswith("/log"):
+                if not ADMIN_TOKEN or qs.get("token", [""])[0] != ADMIN_TOKEN: return self._send(403, {"error": "forbidden"})
+                return self._send(200, {"log": recent_log(int(qs.get("limit", ["50"])[0] or 50))})
             if path.endswith("/health") or path == "/": return self._send(200, {"ok": True})
         except Exception as e:
             return self._send(500, {"error": str(e)[:200]})
@@ -123,6 +165,10 @@ class H(BaseHTTPRequestHandler):
                 if texts is None and data.get("answer_texts") is not None: texts = data.get("answer_texts")
                 v = add(data.get("stem", ""), data.get("qtype", ""), texts or [])
                 return self._send(200, {"ok": v is not None, "votes": v})
+            if path.endswith("/del"):
+                if not ADMIN_TOKEN or data.get("token") != ADMIN_TOKEN: return self._send(403, {"error": "forbidden"})
+                n = delete(stem=data.get("stem"), qtype=data.get("qtype"), ans_key_val=data.get("ans_key"), row_id=data.get("id"))
+                return self._send(200, {"ok": True, "deleted": n})
         except Exception as e:
             return self._send(500, {"error": str(e)[:200]})
         self._send(404, {"error": "not found"})
